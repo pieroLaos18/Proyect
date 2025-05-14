@@ -1,0 +1,232 @@
+:root {
+  --background-color: #ffffff;
+  --card-background-color: #f9f9f9;
+  --text-color: #000000;
+  --input-background-color: #ffffff;
+  --input-border-color: #cccccc;
+  --placeholder-color: #888888;
+  --icon-color: #000000;
+  --primary-color: #007bff;
+  --primary-hover-color: #0056b3;
+}
+
+[data-theme="dark"] {
+  --background-color: #121212;
+  --card-background-color: #1e1e1e;
+  --text-color: #ffffff;
+  --input-background-color: #2c2c2c;
+  --input-border-color: #444444;
+  --placeholder-color: #aaaaaa;
+  --icon-color: #ffffff;
+  --primary-color: #007bff;
+  --primary-hover-color: #0056b3;
+}
+
+/* Fondo general de la página */
+body {
+  background-color: var(--background-color); /* Cambia según el tema */
+  color: var(--text-color); /* Cambia según el tema */
+  margin: 0;
+  height: 100vh; /* Asegúrate de que ocupe toda la ventana */
+}
+
+#app {
+  height: 100%; /* Asegúrate de que ocupe todo el espacio */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Centrar el contenido vertical y horizontalmente */
+.page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: var(--background-color); /* Cambia según el tema */
+  margin: 0;
+}
+
+/* Modo oscuro */
+body.dark-mode {
+  background-color: #121212;
+  color: #ffffff;
+}
+
+/* Botón de cambio de tema */
+.theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 1.8rem;
+  color: var(--icon-color); /* Cambia según el tema */
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.theme-toggle i:hover {
+  color: var(--primary-color); /* Cambia según el tema */
+}
+
+/* Panel izquierdo (imagen) */
+.left-panel {
+  display: none; /* Ocultar por defecto */
+  flex: 1;
+  background: url('path/to/your/image.jpg') no-repeat center center;
+  background-size: cover;
+}
+
+/* Contenido dentro del panel izquierdo */
+.image-content {
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+
+.image-content h2 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.image-content p {
+  font-size: 1rem;
+}
+
+/* Panel derecho (formulario) */
+.right-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fondo del formulario */
+.register-container {
+  background-color: var(--card-background-color);
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  color: var(--text-color); /* Asegúrate de usar la variable */
+}
+
+/* Estilo del título */
+h1 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: var(--text-color); /* Cambia dinámicamente según el tema */
+}
+
+/* Estilo del texto debajo del título */
+p {
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  color: var(--text-color); /* Cambia dinámicamente según el tema */
+}
+
+p a {
+  color: var(--primary-color); /* Enlace dinámico */
+  text-decoration: none;
+}
+
+p a:hover {
+  text-decoration: underline;
+}
+
+/* Estilo de los grupos de formulario */
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+/* Estilo de las etiquetas */
+label {
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+  display: block;
+  color: var(--text-color);
+}
+
+/* Estilo de los campos de entrada */
+.input-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--input-background-color);
+  border: 1px solid var(--input-border-color);
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 15px;
+  transition: border-color 0.3s, box-shadow 0.3s; /* Transición suave */
+}
+
+.input-container:hover {
+  border-color: var(--button-background); /* Cambia el color del borde al pasar el mouse */
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1); /* Sombra ligera */
+}
+
+/* Íconos dentro del input */
+.input-container i {
+  margin-left: 10px; /* Espaciado a la izquierda */
+  color: var(--input-border-color); /* Color del ícono */
+  font-size: 1.2rem; /* Tamaño del ícono */
+}
+
+.input-container input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+.input-container input::placeholder {
+  color: var(--placeholder-color);
+}
+
+/* Efecto de enfoque en el contenedor */
+.input-container:focus-within {
+  border-color: var(--button-background); /* Cambia el color del borde al enfocar */
+  box-shadow: 0 0 8px var(--button-background); /* Sombra más visible */
+}
+
+/* Estilo del formulario */
+form {
+  background-color: transparent; /* Elimina el fondo */
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: none; /* Elimina la sombra */
+}
+
+/* Botón */
+.btn-register {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-register:hover {
+  background-color: var(--primary-hover-color);
+}
+
+/* Media query para pantallas grandes */
+@media (min-width: 768px) {
+  .page-container {
+    flex-direction: row; /* Cambiar a diseño en fila */
+  }
+
+  .left-panel {
+    display: block; /* Mostrar el panel izquierdo */
+  }
+
+  .right-panel {
+    flex: 1;
+  }
+}
