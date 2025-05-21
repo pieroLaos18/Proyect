@@ -8,6 +8,14 @@
   --icon-color: #000000;
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
+  --primary: #00695c;      /* Verde oscuro */
+  --secondary: #26a69a;    /* Verde claro */
+  --card-bg: #fff;
+  --card-text: #232323;
+  --section-bg: #f5f6fa;
+  --accent: #ffb300;
+  --divider: #e0e0e0;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.07);
 }
 
 [data-theme="dark"] {
@@ -20,6 +28,14 @@
   --icon-color: #ffffff;
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
+  --primary: #26a69a;      /* Verde claro para dark si prefieres */
+  --secondary: #00695c;    /* Verde oscuro para dark si prefieres */
+  --card-bg: #23272e;
+  --card-text: #fff;
+  --section-bg: #181a1b;
+  --accent: #ffd54f;
+  --divider: #333a44;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.18);
 }
 
 /* Fondo general de la página */
@@ -216,6 +232,19 @@ form {
   background-color: var(--primary-hover-color);
 }
 
+/* Puedes poner esto en global.css o en el style scoped del componente del AppBar */
+.app-bar {
+  min-height: 64px;           /* Altura mínima recomendada */
+  height: 64px;               /* Altura fija si prefieres */
+  display: flex;
+  align-items: center;        /* Centra verticalmente el contenido */
+  padding: 0 2rem;            /* Espaciado horizontal */
+  background: var(--primary-gradient, #00695c); /* O el color que uses */
+  box-sizing: border-box;
+  width: 100%;
+  z-index: 100;
+}
+
 /* Media query para pantallas grandes */
 @media (min-width: 768px) {
   .page-container {
@@ -229,4 +258,65 @@ form {
   .right-panel {
     flex: 1;
   }
+}
+
+/* En main.css o fuera de <style scoped> */
+.custom-datepicker-popup {
+  background: #23272e !important;
+  color: #e0e0e0 !important;
+  border-radius: 16px !important;
+  border: 1.5px solid #333a44 !important;
+  font-family: inherit;
+}
+.custom-datepicker-popup .mx-calendar-header {
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1.08rem;
+  border-bottom: 1px solid #333a44;
+}
+.custom-datepicker-popup .mx-calendar-content .mx-table-date td {
+  border-radius: 8px;
+  transition: background 0.18s, color 0.18s;
+  font-weight: 500;
+}
+.custom-datepicker-popup .mx-calendar-content .mx-table-date td.current {
+  background: var(--primary);
+  color: #fff !important;
+}
+.custom-datepicker-popup .mx-calendar-content .mx-table-date td.today:not(.current) {
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
+}
+.custom-datepicker-popup .mx-calendar-content .mx-table-date td:not(.current):hover {
+  background: var(--secondary);
+  color: #fff;
+}
+
+/* Personaliza el input del DatePicker */
+.mx-input {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--divider);
+  font-size: 1.08rem;
+  background: var(--card-bg);
+  color: var(--card-text);
+  outline: none;
+  margin-left: 0.5rem;
+  transition: border 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.mx-input:focus {
+  border: 1.5px solid var(--primary);
+  box-shadow: 0 2px 12px rgba(38,198,218,0.08);
+}
+
+/* Modo oscuro */
+[data-theme="dark"] .mx-input {
+  background: #23272e;
+  color: #e0e0e0;
+  border: 1.5px solid #333a44;
 }

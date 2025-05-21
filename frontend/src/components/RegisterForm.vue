@@ -1,16 +1,17 @@
 <!-- filepath: frontend/src/components/RegisterForm.vue -->
+
+<style src="@/assets/css/registerform.css"></style>
 <template>
   <div class="page-container">
-    <!-- Panel izquierdo con la imagen -->
     <div class="left-panel">
+      <!-- Aquí va el texto o imagen, por ejemplo: -->
       <div class="image-content">
         <h2>Lorem Ipsum is simply</h2>
-        <p>Lorem Ipsum is simply</p>
+        <p>Texto descriptivo o imagen aquí...</p>
       </div>
     </div>
-
-    <!-- Panel derecho con el formulario -->
     <div class="right-panel">
+      <!-- Aquí va tu formulario de registro -->
       <div class="register-container">
         <h1>Registrarse</h1>
         <p>Si ya tienes una cuenta, <router-link to="/login">inicia sesión aquí</router-link>.</p>
@@ -104,14 +105,4 @@ export default {
 };
 </script>
 
-<style scoped>
-.success {
-  color: green;
-  margin-top: 10px;
-}
-.error {
-  color: red;
-  margin-top: 10px;
-}
-</style>
 

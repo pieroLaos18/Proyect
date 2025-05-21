@@ -1,3 +1,87 @@
+<style src="@/assets/css/mainview.css"></style>
+<style>
+.notification-modal-bg {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.notification-modal {
+  background: #fff;
+  color: #232323;
+  border-radius: 10px;
+  padding: 2rem 2.5rem;
+  min-width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+}
+.notification-modal h3 {
+  margin-top: 0;
+}
+.notification-modal ul {
+  margin: 1rem 0;
+  padding-left: 1.2rem;
+}
+.notification-modal li {
+  margin-bottom: 0.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  .notification-modal {
+    background: #232323;
+    color: #fff;
+  }
+}
+.low-stock-btn {
+  background: #ffcccc;
+  color: #232323;
+  border: 1px solid #ff3333;
+  border-radius: 6px;
+  padding: 0.5em 1em;
+  margin-bottom: 0.5em;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.2s;
+}
+.low-stock-btn:hover {
+  background: #ffb3b3;
+}
+.low-stock-btn.improved {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  background: linear-gradient(90deg, #ffeaea 60%, #ffd6d6 100%);
+  color: #b10000;
+  border: 2px solid #ff3333;
+  border-radius: 8px;
+  padding: 0.7em 1.2em;
+  margin-bottom: 0.7em;
+  font-size: 1.08em;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(255,51,51,0.07);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.low-stock-btn.improved:hover {
+  background: linear-gradient(90deg, #ffd6d6 60%, #ffeaea 100%);
+  box-shadow: 0 4px 16px rgba(255,51,51,0.15);
+  transform: translateY(-2px) scale(1.03);
+}
+.low-stock-icon {
+  font-size: 1.3em;
+  margin-right: 0.2em;
+}
+.low-stock-details {
+  font-weight: 400;
+  color: #b10000;
+}
+.low-stock-btn .min {
+  color: #b10000;
+  font-size: 0.97em;
+}
+</style>
 <template>
   <div class="main-container">
     <!-- Overlay para cerrar el sidebar -->
@@ -31,7 +115,7 @@
             <i class="fas fa-bars"></i>
           </button>
           <span class="user-name">{{ userName }}</span>
-          <button class="notification-btn">
+          <button class="notification-btn" @click="openNotifications">
             <i class="fas fa-bell"></i>
             <span v-if="notificationCount > 0" class="notification-badge">{{ notificationCount }}</span>
           </button>
@@ -46,6 +130,41 @@
 
       <!-- Contenido dinámico -->
       <router-view></router-view>
+    </div>
+
+    <!-- Modal de inactividad -->
+    <div v-if="showInactivityModal" class="inactivity-modal-bg">
+      <div class="inactivity-modal">
+        <h2>¿Sigues ahí?</h2>
+        <p>Por seguridad, tu sesión se cerrará pronto por inactividad.<br>
+        Haz clic en "Seguir aquí" para continuar.</p>
+        <button class="btn-primary" @click="confirmActivity">Seguir aquí</button>
+      </div>
+    </div>
+
+    <!-- Modal de notificaciones de stock bajo -->
+    <div v-if="showNotifications" class="notification-modal-bg" @click.self="showNotifications = false">
+      <div class="notification-modal">
+        <h3>Alertas de Bajo Stock</h3>
+        <ul v-if="lowStockProducts.length">
+          <li v-for="prod in lowStockProducts" :key="prod.id">
+            <button
+              class="low-stock-btn improved"
+              @click="goToEditProduct(prod.id)"
+            >
+              <span class="low-stock-icon">⚠️</span>
+              <span>
+                <strong>{{ prod.name }}</strong>
+                <span class="low-stock-details">— Stock: {{ prod.stock }} <span class="min">(mínimo: {{ prod.stock_min }})</span></span>
+              </span>
+            </button>
+          </li>
+        </ul>
+        <div v-else>
+          No hay productos con bajo stock.
+        </div>
+        <button class="btn-primary" @click="showNotifications = false">Cerrar</button>
+      </div>
     </div>
   </div>
 </template>
@@ -63,6 +182,13 @@ export default {
       isSmallScreen: false, // Detecta si la pantalla es pequeña
       notificationCount: 3, // Número de notificaciones (ejemplo)
       theme: 'light', // Tema actual
+      inactivityTimer: null,
+      warningTimer: null,
+      showInactivityModal: false,
+      inactivityLimit: 10 * 60 * 1000, // 10 minutos
+      warningLimit: 5 * 60 * 1000, // 5 minutos
+      showNotifications: false,
+      lowStockProducts: [],
     };
   },
   created() {
@@ -78,9 +204,24 @@ export default {
 
     const savedTheme = localStorage.getItem('theme') || 'light';
     this.setTheme(savedTheme);
+
+    this.updateLowStockNotifications();
+  },
+  mounted() {
+    this.resetInactivityTimer();
+    window.addEventListener('mousemove', this.resetInactivityTimer);
+    window.addEventListener('keydown', this.resetInactivityTimer);
+    window.addEventListener('click', this.resetInactivityTimer);
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.checkScreenSize);
+  },
+  beforeUnmount() {
+    window.removeEventListener('mousemove', this.resetInactivityTimer);
+    window.removeEventListener('keydown', this.resetInactivityTimer);
+    window.removeEventListener('click', this.resetInactivityTimer);
+    clearTimeout(this.inactivityTimer);
+    clearTimeout(this.warningTimer);
   },
   methods: {
     toggleSidebar() {
@@ -99,7 +240,7 @@ export default {
       this.$router.push('/login');
     },
     checkScreenSize() {
-      this.isSmallScreen = window.innerWidth <= 600;
+      this.isSmallScreen = window.innerWidth <= 1024;
       if (!this.isSmallScreen) {
         this.isSidebarVisible = true; // Sidebar siempre visible en pantallas grandes
       }
@@ -113,342 +254,57 @@ export default {
       document.documentElement.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
     },
+    resetInactivityTimer() {
+      clearTimeout(this.inactivityTimer);
+      clearTimeout(this.warningTimer);
+      this.showInactivityModal = false;
+
+      // Muestra el modal a los 5 minutos
+      this.warningTimer = setTimeout(() => {
+        this.showInactivityModal = true;
+      }, this.warningLimit);
+
+      // Cierra sesión a los 10 minutos
+      this.inactivityTimer = setTimeout(() => {
+        this.logout();
+      }, this.inactivityLimit);
+    },
+    confirmActivity() {
+      this.showInactivityModal = false;
+      this.resetInactivityTimer();
+    },
+    async openNotifications() {
+      try {
+        const res = await fetch('http://localhost:5000/api/products');
+        const products = await res.json();
+        this.lowStockProducts = products.filter(p => p.stock <= p.stock_min);
+        this.notificationCount = this.lowStockProducts.length; // Actualiza el contador
+        this.showNotifications = true;
+      } catch (e) {
+        this.lowStockProducts = [];
+        this.notificationCount = 0;
+        this.showNotifications = true;
+      }
+    },
+    async updateLowStockNotifications() {
+      try {
+        const res = await fetch('http://localhost:5000/api/products');
+        const products = await res.json();
+        this.lowStockProducts = products.filter(p => p.stock <= p.stock_min);
+        this.notificationCount = this.lowStockProducts.length;
+      } catch (e) {
+        this.lowStockProducts = [];
+        this.notificationCount = 0;
+      }
+    },
+    goToEditProduct(productId) {
+      this.showNotifications = false;
+      // Navega a la vista de productos y pasa el ID del producto a editar
+      this.$router.push({ 
+        path: '/main/products', 
+        query: { edit: productId }
+      });
+    },
   },
 };
 </script>
-
-<style scoped>
-/* Variables de tema */
-:root {
-  --primary-color: #4a90e2; /* Azul profesional */
-  --secondary-color: #34495e; /* Gris oscuro */
-  --background-color: #f5f7fa; /* Fondo claro */
-  --text-color: #ffffff; /* Texto blanco para contraste */
-  --card-background-color: #ffffff; /* Fondo de tarjetas */
-  --accent-color: #e74c3c; /* Rojo para acentos */
-}
-
-[data-theme='dark'] {
-  --primary-color: #1abc9c; /* Verde profesional */
-  --secondary-color: #1e272e; /* Fondo oscuro */
-  --background-color: #1e272e; /* Fondo oscuro */
-  --text-color: #ecf0f1; /* Texto claro */
-  --card-background-color: #2f3640; /* Fondo de tarjetas oscuro */
-  --accent-color: #e74c3c; /* Rojo para acentos */
-}
-
-/* Contenedor principal */
-.main-container {
-  display: flex;
-  height: 100vh;
-  background-color: var(--background-color);
-  font-family: 'Roboto', sans-serif;
-  overflow: hidden; /* Evita que el contenido del sidebar se desborde */
-}
-
-/* Overlay */
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente */
-  z-index: 999; /* Debajo del sidebar */
-}
-
-/* Sidebar */
-.sidebar {
-  width: 250px;
-  background-color: var(--primary-color); /* Fondo igual al app bar */
-  color: var(--text-color); /* Texto dinámico */
-  padding: 1rem;
-  position: fixed;
-  z-index: 1000; /* Asegura que el sidebar esté por encima del contenido */
-  height: 100%;
-  left: 0;
-  top: 0;
-  transform: translateX(-100%); /* Oculto por defecto */
-  transition: transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
-  visibility: hidden; /* Oculta el contenido del sidebar */
-  overflow: hidden; /* Oculta cualquier contenido desbordado */
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); /* Sombra para darle profundidad */
-}
-
-.sidebar-visible {
-  transform: translateX(0); /* Muestra el sidebar */
-  visibility: visible; /* Muestra el contenido del sidebar */
-}
-
-/* Imagen del usuario */
-.user-image {
-  width: 100px; /* Tamaño de la imagen */
-  height: 100px; /* Tamaño de la imagen */
-  border-radius: 50%; /* Hace que la imagen sea circular */
-  border: 5px solid; /* Borde de la imagen */
-  border-image: linear-gradient(135deg, #004d40, #00695c) 1; /* Borde con degradado verde oscuro */
-  object-fit: cover; /* Asegura que la imagen se ajuste correctamente */
-  object-position: center; /* Centra la imagen dentro del contenedor */
-  display: block; /* Asegura que la imagen sea un bloque */
-  background-color: transparent; /* Asegúrate de que no haya fondo */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra para darle profundidad */
-}
-
-/* Contenedor de la imagen del usuario */
-.sidebar-header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--text-color);
-  overflow: hidden; /* Oculta cualquier contenido desbordado */
-  background-color: transparent; /* Asegúrate de que no haya fondo */
-  border: none; /* Elimina cualquier borde */
-}
-
-.sidebar-menu ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.sidebar-menu ul li {
-  margin: 1rem 0;
-}
-
-.sidebar-menu ul li a {
-  display: flex; /* Alinea el ícono y el texto horizontalmente */
-  align-items: center; /* Centra verticalmente el ícono y el texto */
-  text-decoration: none;
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: var(--text-color);
-  padding: 0.8rem 1.2rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  position: relative;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.sidebar-menu ul li a i {
-  margin-right: 10px; /* Espacio entre el ícono y el texto */
-  font-size: 1.2rem; /* Tamaño del ícono */
-}
-
-.sidebar-menu ul li a:hover {
-  background: linear-gradient(135deg, #004d40, #00695c); /* Fondo degradado al pasar el cursor */
-  color: white; /* Cambia el color del texto */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra más pronunciada */
-}
-
-.sidebar-menu ul li a:hover i {
-  color: white; /* Cambia el color del ícono al pasar el cursor */
-}
-
-.sidebar-menu ul li a::after {
-  content: '';
-  display: block;
-  width: 0;
-  height: 3px;
-  background-color: var(--accent-color);
-  transition: width 0.3s ease;
-  margin-top: 5px;
-}
-
-.sidebar-menu ul li a:hover::after {
-  width: 100%; /* Subrayado animado */
-}
-
-.sidebar-menu ul li a.active {
-  background: linear-gradient(135deg, #004d40, #00695c); /* Fondo degradado para el enlace activo */
-  color: white;
-  font-weight: bold;
-}
-
-.sidebar-menu ul li a.active i {
-  color: white; /* Ícono blanco para el enlace activo */
-}
-
-.sidebar-menu ul li a.active::after {
-  width: 100%; /* Subrayado completo para el enlace activo */
-}
-
-.sidebar-menu ul li .router-link-active {
-  background: linear-gradient(135deg, #004d40, #00695c); /* Fondo degradado */
-  color: white; /* Texto blanco */
-  font-weight: bold;
-}
-
-@media (min-width: 601px) {
-  .sidebar {
-    position: relative; /* Cambia a relativo en pantallas grandes */
-    transform: translateX(0); /* Asegura que esté visible */
-    visibility: visible;
-    box-shadow: none; /* Elimina la sombra */
-  }
-
-  .main-content {
-    margin-left: 250px; /* Ajusta el margen para coincidir con el ancho del Sidebar */
-  }
-}
-
-@media (max-width: 600px) {
-  .sidebar {
-    position: fixed; /* Sidebar fijo en pantallas pequeñas */
-    transform: translateX(-100%); /* Oculto por defecto */
-    visibility: hidden;
-  }
-
-  .sidebar-visible {
-    transform: translateX(0); /* Muestra el Sidebar */
-    visibility: visible;
-  }
-
-  .main-content {
-    margin-left: 0; /* Elimina el margen en pantallas pequeñas */
-  }
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  margin-left: 0; /* Elimina el margen del sidebar por defecto */
-  transition: margin-left 0.3s ease-in-out;
-}
-
-/* App Bar */
-.app-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--primary-color);
-  color: white;
-  padding: 0.5rem 1rem;
-  height: 70px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-}
-
-.left-section {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem; /* Espacio entre los elementos */
-}
-
-.hamburger-btn {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  display: none; /* Oculto por defecto */
-}
-
-@media (max-width: 600px) {
-  .hamburger-btn {
-    display: block; /* Visible solo en pantallas pequeñas */
-  }
-}
-
-.user-name {
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-.logout-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  color: white;
-  cursor: pointer;
-  font-size: 0.9rem;
-  padding: 5px 15px;
-  border-radius: 20px;
-  transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.logout-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: var(--accent-color);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-}
-
-.right-section {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem; /* Espacio entre los elementos */
-}
-
-/* Botón de cambio de tema */
-.theme-toggle i {
-  font-size: 1.5rem;
-  cursor: pointer;
-  transition: transform 0.3s ease, color 0.3s ease;
-}
-
-.theme-toggle i:hover {
-  transform: scale(1.1);
-  color: var(--accent-color);
-}
-
-/* Botón de notificación */
-.notification-btn {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.5rem;
-  position: relative; /* Necesario para posicionar la insignia */
-  cursor: pointer;
-  transition: transform 0.3s ease, color 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.notification-btn:hover {
-  transform: scale(1.1);
-  color: var(--accent-color);
-}
-
-/* Insignia de notificación */
-.notification-badge {
-  position: absolute;
-  top: 0; /* Ajusta la posición vertical */
-  right: 0; /* Ajusta la posición horizontal */
-  transform: translate(50%, -50%); /* Centra la insignia en la esquina superior derecha */
-  background-color: var(--accent-color);
-  color: white;
-  font-size: 0.8rem;
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Sobrescribe las variables globales con un selector más específico */
-.main-container {
-  --primary-color: #004d40; /* Verde azulino oscuro */
-  --primary-gradient: linear-gradient(135deg, #004d40, #00695c); /* Degradado verde azulino */
-}
-
-/* Sidebar */
-.sidebar {
-  background: var(--primary-gradient); /* Aplica el degradado */
-  color: var(--text-color);
-}
-
-/* App Bar */
-.app-bar {
-  background: var(--primary-gradient); /* Aplica el degradado */
-  color: var(--text-color);
-}
-
-/* Contenedor del contenido dinámico */
-.dynamic-content {
-  padding-left: 20px; /* Espacio adicional entre el texto y el Sidebar */
-}
-</style>

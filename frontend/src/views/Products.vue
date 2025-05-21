@@ -1,3 +1,4 @@
+<style src="@/assets/css/products.css"></style>
 <template>
   <div class="dynamic-content">
     <h1>Productos</h1>
@@ -18,6 +19,14 @@
         </option>
       </select>
 
+      <!-- Botón para cambiar la vista -->
+      <button
+        class="toggle-view-btn"
+        @click="viewMode = viewMode === 'cards' ? 'list' : 'cards'"
+      >
+        {{ viewMode === 'cards' ? 'Ver como Lista' : 'Ver como Tarjetas' }}
+      </button>
+
       <!-- Botón para agregar productos -->
       <button @click="openAddProductModal" class="add-product-btn">
         Agregar Producto
@@ -25,17 +34,25 @@
     </div>
 
     <!-- Lista de productos -->
-    <div class="products-list">
+    <div v-if="viewMode === 'cards'" class="products-list">
       <div
         v-for="product in filteredProducts"
         :key="product.id"
         class="product-card"
+        :class="{ 'low-stock': product.stock <= product.stock_min }"
       >
-        <img :src="product.image" alt="Imagen del producto" class="product-image" />
+        <img
+          :src="product.image || defaultProductImg"
+          alt="Imagen del producto"
+          class="product-image"
+        />
         <h3>{{ product.name }}</h3>
-        <p>{{ product.description }}</p>
-        <p><strong>Precio:</strong> ${{ product.price }}</p>
-
+        <div class="product-description">{{ product.description }}</div>
+        <div class="product-price"><strong>Precio:</strong> S/{{ product.price }}</div>
+        <div>
+          <strong class="stock-label">Stock:</strong> {{ product.stock }}
+          <span v-if="product.stock <= product.stock_min" class="stock-alert" title="Stock bajo">⚠️ Bajo stock</span>
+        </div>
         <!-- Botones de acción -->
         <div class="product-actions">
           <button @click="editProduct(product)" class="edit-btn">Editar</button>
@@ -44,39 +61,114 @@
       </div>
     </div>
 
+    <div v-else class="products-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Precio</th>
+            <th>Categoría</th>
+            <th>Stock</th>
+            <th>Stock Mín</th>
+            <th>Stock Máx</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="product in filteredProducts"
+            :key="product.id"
+            :class="{ 'low-stock': product.stock <= product.stock_min }"
+          >
+            <td>
+              <img :src="product.image || defaultProductImg" alt="Imagen" style="width: 60px; height: 60px; object-fit: contain;" />
+            </td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+            <td>S/{{ product.price }}</td>
+            <td>{{ product.category }}</td>
+            <td>
+              {{ product.stock }}
+              <span v-if="product.stock <= product.stock_min" class="stock-alert" title="Stock bajo">⚠️ Bajo stock</span>
+            </td>
+            <td>{{ product.stock_min }}</td>
+            <td>{{ product.stock_max }}</td>
+            <td>
+              <button @click="editProduct(product)" class="edit-btn">Editar</button>
+              <button @click="deleteProduct(product.id)" class="delete-btn">Eliminar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- Modal para agregar productos -->
-    <div v-if="isModalOpen" class="modal-overlay">
+    <div v-if="isModalOpen" class="modal-overlay" @click.self="closeAddProductModal">
       <div class="modal">
+        <button class="close-btn" @click="closeAddProductModal">×</button>
         <h2>Agregar Producto</h2>
-        <form @submit.prevent="addProduct">
-          <label>Nombre:</label>
-          <input type="text" v-model="newProduct.name" required />
+        <form @submit.prevent="isEditing ? updateProduct() : addProduct()">
+          <div class="form-group">
+            <label for="name">Nombre:</label>
+            <input id="name" type="text" v-model="newProduct.name" required />
+          </div>
 
-          <label>Descripción:</label>
-          <textarea v-model="newProduct.description" required></textarea>
+          <div class="form-group">
+            <label for="description">Descripción:</label>
+            <textarea id="description" v-model="newProduct.description" required></textarea>
+          </div>
 
-          <label>Precio de Venta:</label>
-          <input type="number" v-model="newProduct.price" required />
+          <div class="form-group">
+            <label for="price">Precio de Venta:</label>
+            <input id="price" type="number" v-model="newProduct.price" required />
+          </div>
 
-          <label>Precio de Compra:</label>
-          <input type="number" v-model="newProduct.purchasePrice" required />
+          <div class="form-group">
+            <label for="purchasePrice">Precio de Compra:</label>
+            <input
+              id="purchasePrice"
+              type="text"
+              v-model="newProduct.purchasePrice"
+              @input="validateDecimal('purchasePrice')"
+              required
+            />
+          </div>
 
-          <label>Categoría:</label>
-          <input type="text" v-model="newProduct.category" required />
+          <div class="form-group">
+            <label for="category">Categoría:</label>
+            <input id="category" type="text" v-model="newProduct.category" required />
+          </div>
 
-          <label>Stock:</label>
-          <input type="number" v-model="newProduct.stock" required />
+          <div class="form-group">
+            <label for="stock">Stock:</label>
+            <input id="stock" type="number" v-model="newProduct.stock" required />
+          </div>
 
-          <label>Imagen:</label>
-          <input type="file" @change="handleImageUpload" accept="image/*" />
+          <div class="form-group">
+            <label for="stockMin">Stock Mínimo:</label>
+            <input id="stockMin" type="number" v-model="newProduct.stockMin" required />
+          </div>
+          <div class="form-group">
+            <label for="stockMax">Stock Máximo:</label>
+            <input id="stockMax" type="number" v-model="newProduct.stockMax" required />
+          </div>
+
+          <div class="form-group">
+            <label for="image">Imagen:</label>
+            <input id="image" type="file" @change="handleImageUpload" accept="image/*" />
+          </div>
 
           <!-- Vista previa de la imagen -->
           <div v-if="newProduct.imagePreview" class="image-preview">
             <img :src="newProduct.imagePreview" alt="Vista previa de la imagen" />
           </div>
 
-          <button type="submit">Guardar</button>
-          <button type="button" @click="closeAddProductModal">Cancelar</button>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" class="btn btn-secondary" @click="closeAddProductModal">Cancelar</button>
+          </div>
         </form>
       </div>
     </div>
@@ -85,33 +177,17 @@
 
 <script>
 import axios from 'axios';
+import imageCompression from 'browser-image-compression';
+import defaultProductImg from '@/assets/images/default-product.png';
 
 export default {
   data() {
     return {
       searchQuery: '', // Para el buscador
       selectedCategory: '', // Categoría seleccionada
-      categories: ['Electrónica', 'Ropa', 'Hogar', 'Juguetes', 'Libros'], // Ejemplo de categorías
+      categories: [], // Categorías obtenidas dinámicamente
       isModalOpen: false, // Controla si el modal está abierto
-      products: [
-        // Ejemplo de productos iniciales
-        {
-          id: 1,
-          name: 'Producto 1',
-          description: 'Descripción del producto 1',
-          price: 100,
-          category: 'Electrónica',
-          image: 'https://via.placeholder.com/150',
-        },
-        {
-          id: 2,
-          name: 'Producto 2',
-          description: 'Descripción del producto 2',
-          price: 200,
-          category: 'Ropa',
-          image: 'https://via.placeholder.com/150',
-        },
-      ],
+      products: [], // Productos obtenidos de la base de datos
       newProduct: {
         name: '',
         description: '',
@@ -119,9 +195,14 @@ export default {
         purchasePrice: '',
         category: '',
         stock: '',
-        image: '',
+        stockMin: '',
+        stockMax: '',
+        imageFile: null,
         imagePreview: null,
       },
+      isEditing: false,
+      editingProductId: null,
+      viewMode: 'cards', // 'cards' o 'list'
     };
   },
   computed: {
@@ -139,8 +220,16 @@ export default {
   methods: {
     async fetchProducts() {
       try {
-        const response = await axios.get('http://localhost:3000/products');
-        this.products = response.data;
+        const response = await axios.get('http://localhost:5000/api/products');
+        this.products = response.data.map((product) => ({
+          ...product,
+          image: product.image
+            ? (product.image.startsWith('/uploads/')
+                ? `http://localhost:5000${product.image}`
+                : product.image)
+            : defaultProductImg,
+        }));
+        this.categories = [...new Set(response.data.map((product) => product.category))];
       } catch (error) {
         console.error('Error al obtener los productos:', error);
       }
@@ -150,35 +239,110 @@ export default {
     },
     closeAddProductModal() {
       this.isModalOpen = false;
+      this.isEditing = false;
+      this.editingProductId = null;
       this.resetNewProduct();
     },
-    handleImageUpload(event) {
+    async handleImageUpload(event) {
       const file = event.target.files[0];
+      const maxSize = 2 * 1024 * 1024; // 2 MB
+
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.newProduct.imagePreview = e.target.result; // Guarda la vista previa
-          this.newProduct.image = file; // Guarda el archivo para su uso posterior
-        };
-        reader.readAsDataURL(file);
+        if (file.size > maxSize) {
+          alert('La imagen es demasiado pesada. El tamaño máximo permitido es de 2 MB.');
+          return;
+        }
+
+        try {
+          const options = {
+            maxSizeMB: 1, // Tamaño máximo en MB después de la compresión
+            maxWidthOrHeight: 800, // Dimensiones máximas
+            useWebWorker: true,
+          };
+          const compressedFile = await imageCompression(file, options);
+
+          // --- SOLUCIÓN: Asigna un nombre con extensión al archivo comprimido ---
+          const ext = file.name.split('.').pop();
+          const newFile = new File(
+            [compressedFile],
+            `compressed.${ext}`,
+            { type: compressedFile.type }
+          );
+          this.newProduct.imageFile = newFile;
+          // ----------------------------------------------------------------------
+
+          // Crear una vista previa de la imagen
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.newProduct.imagePreview = e.target.result; // Vista previa
+          };
+          reader.readAsDataURL(compressedFile);
+        } catch (error) {
+          console.error('Error al comprimir la imagen:', error);
+        }
       }
     },
     async addProduct() {
       try {
-        const response = await axios.post('http://localhost:3000/products', this.newProduct);
-        this.products.push(response.data);
+        // Crear un objeto FormData
+        const formData = new FormData();
+        formData.append('name', this.newProduct.name);
+        formData.append('description', this.newProduct.description);
+        formData.append('price', parseFloat(this.newProduct.price));
+        formData.append('purchase_price', parseFloat(this.newProduct.purchasePrice));
+        formData.append('category', this.newProduct.category);
+        formData.append('stock', parseInt(this.newProduct.stock, 10));
+        formData.append('stock_min', this.newProduct.stockMin || 0);
+        formData.append('stock_max', this.newProduct.stockMax || 0);
+
+        // Si hay una imagen seleccionada, agregarla al FormData
+        if (this.newProduct.imageFile) {
+          formData.append('image', this.newProduct.imageFile);
+        }
+
+        console.log('Datos enviados:', formData); // Log para depurar
+
+        // Enviar los datos al backend
+        const response = await axios.post('http://localhost:5000/api/products', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        // Agregar el producto a la lista local
+        const product = response.data;
+        product.image = product.image && product.image.startsWith('/uploads/')
+          ? `http://localhost:5000${product.image}`
+          : (product.image || defaultProductImg);
+        this.products.push(product);
         this.closeAddProductModal();
       } catch (error) {
-        console.error('Error al agregar el producto:', error);
+        console.error('Error al agregar el producto:', error.response?.data || error.message);
       }
     },
     async updateProduct() {
       try {
-        await axios.put(`http://localhost:3000/products/${this.newProduct.id}`, this.newProduct);
+        const formData = new FormData();
+        formData.append('name', this.newProduct.name);
+        formData.append('description', this.newProduct.description);
+        formData.append('price', parseFloat(this.newProduct.price));
+        formData.append('purchase_price', parseFloat(this.newProduct.purchasePrice));
+        formData.append('category', this.newProduct.category);
+        formData.append('stock', parseInt(this.newProduct.stock, 10));
+        formData.append('stock_min', this.newProduct.stockMin || 0);
+        formData.append('stock_max', this.newProduct.stockMax || 0);
+        if (this.newProduct.imageFile) {
+          formData.append('image', this.newProduct.imageFile);
+        }
+        await axios.put(
+          `http://localhost:5000/api/products/${this.editingProductId}`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
         this.fetchProducts();
         this.closeAddProductModal();
       } catch (error) {
-        console.error('Error al actualizar el producto:', error);
+        console.error('Error al actualizar el producto:', error.response?.data || error.message);
       }
     },
     resetNewProduct() {
@@ -190,297 +354,54 @@ export default {
         purchasePrice: '',
         category: '',
         stock: '',
-        image: '',
-        imagePreview: '', // Reinicia la vista previa
+        stockMin: '',
+        stockMax: '',
+        imageFile: null,
+        imagePreview: null,
       };
     },
     editProduct(product) {
-      // Abre el modal con los datos del producto para editar
-      this.newProduct = { ...product, imagePreview: product.image };
+      this.isEditing = true;
+      this.editingProductId = product.id;
+      this.newProduct = {
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        purchasePrice: product.purchase_price || product.purchasePrice || '',
+        category: product.category,
+        stock: product.stock,
+        stockMin: product.stock_min,
+        stockMax: product.stock_max,
+        imageFile: null,
+        imagePreview: product.image,
+      };
       this.isModalOpen = true;
     },
     async deleteProduct(productId) {
       try {
-        await axios.delete(`http://localhost:3000/products/${productId}`);
+        await axios.delete(`http://localhost:5000/api/products/${productId}`);
         this.fetchProducts();
       } catch (error) {
         console.error('Error al eliminar el producto:', error);
       }
     },
+    validateDecimal(field) {
+      // Reemplaza comas por puntos para manejar decimales
+      this.newProduct[field] = this.newProduct[field]
+        .replace(',', '.')
+        .replace(/[^0-9.]/g, ''); // Permite solo números y puntos
+    },
+  },
+  mounted() {
+    this.fetchProducts().then(() => {
+      const editId = this.$route.query.edit;
+      if (editId) {
+        const product = this.products.find(p => p.id == editId);
+        if (product) {
+          this.editProduct(product);
+        }
+      }
+    });
   },
 };
 </script>
-
-<style>
-:root {
-  --background-color: #ffffff;
-  --text-color: #000000;
-  --input-background: #f0f0f0;
-  --input-text-color: #000000;
-  --card-background: #ffffff;
-  --card-border: #ccc;
-  --button-background: #004d40;
-  --button-hover: #00695c;
-}
-
-[data-theme="dark"] {
-  --background-color: #1e1e1e;
-  --text-color: #ffffff;
-  --input-background: #2e2e2e;
-  --input-text-color: #ffffff;
-  --card-background: #2e2e2e;
-  --card-border: #444;
-  --button-background: #004d40;
-  --button-hover: #00695c;
-}
-
-.dynamic-content {
-  padding: 20px;
-}
-
-.products-header {
-  display: flex;
-  flex-wrap: wrap; /* Permite que los elementos se ajusten en varias líneas */
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px; /* Espaciado entre los elementos */
-  margin-bottom: 20px;
-}
-
-.search-bar,
-.category-filter {
-  flex: 1; /* Ocupan el mismo espacio disponible */
-  min-width: 250px; /* Ancho mínimo para evitar que se reduzcan demasiado */
-}
-
-.add-product-btn {
-  flex-shrink: 0; /* Evita que el botón se reduzca */
-  padding: 12px 20px;
-  font-size: 16px;
-  border-radius: 8px; /* Bordes redondeados */
-}
-
-.search-bar {
-  background-color: var(--input-background);
-  color: var(--input-text-color);
-  border: 1px solid var(--card-border);
-  padding: 12px;
-  font-size: 16px;
-  border-radius: 8px; /* Bordes redondeados */
-  width: 100%; /* Ocupa todo el espacio disponible */
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
-}
-
-.search-bar:focus {
-  box-shadow: 0 0 5px var(--button-hover); /* Resalta el buscador al enfocarlo */
-  border-color: var(--button-hover); /* Cambia el color del borde */
-  outline: none;
-}
-
-.category-filter {
-  background-color: var(--input-background);
-  color: var(--input-text-color);
-  border: 1px solid var(--card-border);
-  padding: 12px;
-  font-size: 16px;
-  border-radius: 8px; /* Bordes redondeados */
-  width: 100%; /* Ocupa todo el espacio disponible */
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
-}
-
-.category-filter:focus {
-  box-shadow: 0 0 5px var(--button-hover); /* Resalta el filtro al enfocarlo */
-  border-color: var(--button-hover); /* Cambia el color del borde */
-  outline: none;
-}
-
-.products-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Ajusta el ancho mínimo */
-  gap: 20px; /* Espaciado entre las tarjetas */
-}
-
-.product-card {
-  background-color: var(--card-background);
-  color: var(--text-color);
-  border: 1px solid var(--card-border);
-  border-radius: 10px; /* Bordes más redondeados */
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Sombra más suave */
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.product-card:hover {
-  transform: translateY(-5px); /* Efecto de elevación */
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); /* Sombra más pronunciada */
-}
-
-.product-image {
-  background-color: var(--card-border);
-  border-radius: 8px;
-  width: 100%;
-  height: 150px;
-  object-fit: cover;
-  margin-bottom: 15px;
-}
-
-.product-card h3 {
-  font-size: 1.2rem;
-  margin-bottom: 10px;
-}
-
-.product-card p {
-  font-size: 0.9rem;
-  margin-bottom: 5px;
-}
-
-.product-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15px;
-}
-
-.edit-btn,
-.delete-btn {
-  padding: 8px 15px;
-  font-size: 14px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.edit-btn {
-  background-color: #00695c; /* Verde oscuro */
-  color: white;
-}
-
-.edit-btn:hover {
-  background-color: #004d40; /* Verde más oscuro */
-}
-
-.delete-btn {
-  background-color: #d32f2f; /* Rojo */
-  color: white;
-}
-
-.delete-btn:hover {
-  background-color: #b71c1c; /* Rojo más oscuro */
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal {
-  background-color: var(--background-color);
-  color: var(--text-color);
-  padding: 25px;
-  border-radius: 10px; /* Bordes más redondeados */
-  width: 450px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Sombra más elegante */
-}
-
-.modal h2 {
-  margin-bottom: 20px;
-  font-size: 1.5rem;
-  text-align: center;
-  color: var(--text-color);
-}
-
-.modal form label {
-  display: block;
-  margin-top: 15px;
-  font-weight: bold;
-  color: var(--text-color);
-}
-
-.modal form input,
-.modal form textarea {
-  background-color: var(--input-background);
-  color: var(--input-text-color);
-  border: 1px solid var(--card-border);
-  border-radius: 5px;
-  padding: 10px;
-  margin-top: 5px;
-  width: 100%;
-  font-size: 14px;
-}
-
-.modal form button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.modal form button[type='submit'] {
-  background-color: var(--button-background);
-  color: white;
-  transition: background-color 0.3s ease;
-}
-
-.modal form button[type='submit']:hover {
-  background-color: var(--button-hover);
-}
-
-.modal form button[type='button'] {
-  background-color: #555;
-  color: white;
-  margin-left: 10px;
-  transition: background-color 0.3s ease;
-}
-
-.modal form button[type='button']:hover {
-  background-color: #777;
-}
-
-.image-preview {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.image-preview img {
-  max-width: 100%;
-  max-height: 150px;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-@media (max-width: 768px) {
-  .products-header {
-    flex-direction: column; /* Cambia a diseño vertical */
-    align-items: stretch; /* Asegura que los elementos ocupen todo el ancho */
-  }
-
-  .add-product-btn {
-    width: 100%; /* Botón ocupa todo el ancho en pantallas pequeñas */
-    text-align: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .search-bar,
-  .category-filter {
-    font-size: 14px; /* Reduce el tamaño del texto */
-    padding: 8px; /* Reduce el relleno */
-  }
-
-  .add-product-btn {
-    font-size: 14px; /* Reduce el tamaño del texto del botón */
-    padding: 8px 15px; /* Ajusta el relleno */
-  }
-}
-</style>

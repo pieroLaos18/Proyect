@@ -1,5 +1,5 @@
 <!-- filepath: frontend/src/components/LoginForm.vue -->
-
+<style src="@/assets/css/loginform.css"></style>
 <template>
   <div class="page-container">
     <div class="login-container">
@@ -21,9 +21,10 @@
           </div>
         </div>
         <button type="submit" class="btn-login">Iniciar Sesión</button>
-        <p class="forgot-password">
-          <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
-        </p>
+<p v-if="error" class="login-error">{{ error }}</p>
+<p class="forgot-password">
+  <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
+</p>
       </form>
     </div>
   </div>
@@ -37,7 +38,12 @@ export default {
     return {
       email: '',
       password: '',
+      error: '', // <--- agrega esto
     };
+  },
+  watch: {
+    email() { this.error = ''; },
+    password() { this.error = ''; }
   },
   methods: {
     async handleLogin() {
@@ -50,6 +56,7 @@ export default {
         // Guarda el token en localStorage
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('userName', response.data.user.name);
+        localStorage.setItem('userId', response.data.user.id);
 
         // Redirige al dashboard
         this.$router.push('/main/dashboard');
@@ -61,111 +68,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-/* Contenedor principal */
-.page-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: var(--background-color); /* Cambia según el tema */
-}
-
-/* Contenedor del formulario */
-.login-container {
-  background-color: var(--card-background-color);
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  color: var(--text-color); /* Cambia según el tema */
-}
-
-.login-container h1 {
-  font-size: 2rem;
-  margin-bottom: 20px;
-  color: var(--text-color); /* Cambia según el tema */
-}
-
-.login-container p {
-  font-size: 0.9rem;
-  margin-bottom: 20px;
-  color: var(--text-color); /* Cambia según el tema */
-}
-
-.login-container a {
-  color: var(--primary-color); /* Enlace dinámico */
-  text-decoration: none;
-}
-
-.login-container a:hover {
-  text-decoration: underline;
-}
-
-/* Estilo del formulario */
-.form-group {
-  margin-bottom: 15px;
-}
-
-.input-container {
-  display: flex;
-  align-items: center;
-  background-color: var(--input-background-color);
-  border: 1px solid var(--input-border-color);
-  border-radius: 5px;
-  padding: 10px;
-}
-
-.input-container i {
-  margin-right: 10px;
-  color: var(--icon-color);
-}
-
-.input-container input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--text-color);
-  font-size: 1rem;
-}
-
-.input-container input::placeholder {
-  color: var(--placeholder-color);
-}
-
-/* Botón */
-.btn-login {
-  width: 100%;
-  padding: 12px;
-  background-color: var(--primary-color);
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.btn-login:hover {
-  background-color: var(--primary-hover-color);
-}
-
-/* Enlace de "¿Olvidaste tu contraseña?" */
-.forgot-password {
-  margin-top: 15px;
-}
-
-.forgot-password a {
-  color: var(--primary-color);
-  font-size: 0.9rem;
-  text-decoration: none;
-}
-
-.forgot-password a:hover {
-  text-decoration: underline;
-}
-</style>

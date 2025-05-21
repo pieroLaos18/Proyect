@@ -9,16 +9,20 @@ import Login from '../views/LoginView.vue';
 import Register from '../views/RegisterView.vue'; // Importa el componente de registro
 
 const routes = [
-  { path: '/', redirect: '/main' }, // Redirige a /main por defecto
-  { path: '/login', name: 'Login', component: Login }, // Ruta para Login
-  { path: '/register', name: 'Register', component: Register }, // Ruta para Register
-  { path: '/main', name: 'MainView', component: MainView, 
+  { path: '/', redirect: '/main' },
+  { path: '/login', name: 'Login', component: Login },
+  { path: '/register', name: 'Register', component: Register },
+  {
+    path: '/main',
+    name: 'MainView',
+    component: MainView,
+    meta: { requiresAuth: true }, // <--- PROTEGIDA
     children: [
-      { path: 'dashboard', name: 'Dashboard', component: Dashboard },
-      { path: 'products', name: 'Products', component: Products },
-      { path: 'sales', name: 'Sales', component: Sales },
-      { path: 'reports', name: 'Reports', component: Reports },
-      { path: 'users', name: 'Users', component: Users },
+      { path: 'dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
+      { path: 'products', name: 'Products', component: Products, meta: { requiresAuth: true } },
+      { path: 'sales', name: 'Sales', component: Sales, meta: { requiresAuth: true } },
+      { path: 'reports', name: 'Reports', component: Reports, meta: { requiresAuth: true } },
+      { path: 'users', name: 'Users', component: Users, meta: { requiresAuth: true } },
     ]
   },
 ];
@@ -29,13 +33,18 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('authToken'); // Verifica si hay un token
+  const isAuthenticated = !!localStorage.getItem('authToken');
 
   // Si la ruta requiere autenticación y el usuario no está autenticado, redirige al login
   if (to.matched.some((record) => record.meta.requiresAuth) && !isAuthenticated) {
     next('/login');
-  } else {
-    next(); // Permite el acceso
+  }
+  // Si el usuario está autenticado e intenta ir a login o register, redirígelo al dashboard
+  else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
+    next('/main/dashboard');
+  }
+  else {
+    next();
   }
 });
 

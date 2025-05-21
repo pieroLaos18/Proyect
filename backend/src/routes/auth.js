@@ -20,6 +20,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Contraseña incorrecta' });
     }
 
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user[0].id]);
+    await pool.query(
+      'INSERT INTO activities (descripcion) VALUES (?)',
+      [`Inicio de sesión del usuario ${user[0].nombre} (${user[0].correo_electronico})`]
+    );
     const token = jwt.sign({ id: user[0].id }, 'secretKey', { expiresIn: '1h' });
 
     res.status(200).json({
@@ -51,7 +56,14 @@ router.post('/register', async (req, res) => {
 
     await pool.query(
       'INSERT INTO users (correo_electronico, password, nombre, apellido, rol, direccion) VALUES (?, ?, ?, ?, ?, ?)',
-      [correo_electronico, hashedPassword, nombre, apellido, rol || 'user', direccion]
+      [correo_electronico, hashedPassword, nombre, apellido, rol || 'Usuario', direccion]
+    );
+    await pool.query(
+      'INSERT INTO activities (descripcion, usuario) VALUES (?, ?)',
+      [
+        `Registro de nuevo usuario: ${nombre} (${correo_electronico})`,
+        nombre
+      ]
     );
 
     res.status(201).json({ message: 'Usuario registrado exitosamente' });
