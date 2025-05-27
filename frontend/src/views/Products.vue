@@ -1,9 +1,10 @@
 <style src="@/assets/css/products.css"></style>
+
 <template>
   <div class="dynamic-content">
     <h1>Productos</h1>
     <div class="products-header">
-      <!-- Buscador -->
+      <!-- Buscador de productos -->
       <input
         type="text"
         v-model="searchQuery"
@@ -19,7 +20,7 @@
         </option>
       </select>
 
-      <!-- Botón para cambiar la vista -->
+      <!-- Botón para cambiar la vista de productos -->
       <button
         class="toggle-view-btn"
         @click="viewMode = viewMode === 'cards' ? 'list' : 'cards'"
@@ -33,7 +34,7 @@
       </button>
     </div>
 
-    <!-- Lista de productos -->
+    <!-- Vista de productos en tarjetas -->
     <div v-if="viewMode === 'cards'" class="products-list">
       <div
         v-for="product in filteredProducts"
@@ -61,6 +62,7 @@
       </div>
     </div>
 
+    <!-- Vista de productos en tabla -->
     <div v-else class="products-table">
       <table>
         <thead>
@@ -104,11 +106,11 @@
       </table>
     </div>
 
-    <!-- Modal para agregar productos -->
+    <!-- Modal para agregar o editar productos -->
     <div v-if="isModalOpen" class="modal-overlay" @click.self="closeAddProductModal">
       <div class="modal">
         <button class="close-btn" @click="closeAddProductModal">×</button>
-        <h2>Agregar Producto</h2>
+        <h2>{{ isEditing ? 'Editar Producto' : 'Agregar Producto' }}</h2>
         <form @submit.prevent="isEditing ? updateProduct() : addProduct()">
           <div class="form-group">
             <label for="name">Nombre:</label>
@@ -183,11 +185,17 @@ import defaultProductImg from '@/assets/images/default-product.png';
 export default {
   data() {
     return {
-      searchQuery: '', // Para el buscador
-      selectedCategory: '', // Categoría seleccionada
-      categories: [], // Categorías obtenidas dinámicamente
-      isModalOpen: false, // Controla si el modal está abierto
-      products: [], // Productos obtenidos de la base de datos
+      // Buscador de productos
+      searchQuery: '',
+      // Categoría seleccionada para filtrar
+      selectedCategory: '',
+      // Lista de categorías únicas
+      categories: [],
+      // Controla si el modal está abierto
+      isModalOpen: false,
+      // Lista de productos obtenidos de la base de datos
+      products: [],
+      // Datos del producto nuevo o en edición
       newProduct: {
         name: '',
         description: '',
@@ -200,12 +208,15 @@ export default {
         imageFile: null,
         imagePreview: null,
       },
+      // Estado de edición
       isEditing: false,
       editingProductId: null,
-      viewMode: 'cards', // 'cards' o 'list'
+      // Modo de vista: 'cards' o 'list'
+      viewMode: 'cards',
     };
   },
   computed: {
+    // Filtra productos según búsqueda y categoría
     filteredProducts() {
       return this.products.filter((product) => {
         const matchesSearchQuery = product.name
@@ -218,6 +229,7 @@ export default {
     },
   },
   methods: {
+    // Obtiene los productos desde la API
     async fetchProducts() {
       try {
         const response = await axios.get('http://localhost:5000/api/products');
@@ -234,15 +246,18 @@ export default {
         console.error('Error al obtener los productos:', error);
       }
     },
+    // Abre el modal para agregar producto
     openAddProductModal() {
       this.isModalOpen = true;
     },
+    // Cierra el modal y resetea el formulario
     closeAddProductModal() {
       this.isModalOpen = false;
       this.isEditing = false;
       this.editingProductId = null;
       this.resetNewProduct();
     },
+    // Maneja la carga y compresión de la imagen
     async handleImageUpload(event) {
       const file = event.target.files[0];
       const maxSize = 2 * 1024 * 1024; // 2 MB
@@ -261,7 +276,7 @@ export default {
           };
           const compressedFile = await imageCompression(file, options);
 
-          // --- SOLUCIÓN: Asigna un nombre con extensión al archivo comprimido ---
+          // Asigna un nombre con extensión al archivo comprimido
           const ext = file.name.split('.').pop();
           const newFile = new File(
             [compressedFile],
@@ -269,7 +284,6 @@ export default {
             { type: compressedFile.type }
           );
           this.newProduct.imageFile = newFile;
-          // ----------------------------------------------------------------------
 
           // Crear una vista previa de la imagen
           const reader = new FileReader();
@@ -282,9 +296,9 @@ export default {
         }
       }
     },
+    // Agrega un nuevo producto usando FormData
     async addProduct() {
       try {
-        // Crear un objeto FormData
         const formData = new FormData();
         formData.append('name', this.newProduct.name);
         formData.append('description', this.newProduct.description);
@@ -299,8 +313,6 @@ export default {
         if (this.newProduct.imageFile) {
           formData.append('image', this.newProduct.imageFile);
         }
-
-        console.log('Datos enviados:', formData); // Log para depurar
 
         // Enviar los datos al backend
         const response = await axios.post('http://localhost:5000/api/products', formData, {
@@ -320,6 +332,7 @@ export default {
         console.error('Error al agregar el producto:', error.response?.data || error.message);
       }
     },
+    // Actualiza un producto existente
     async updateProduct() {
       try {
         const formData = new FormData();
@@ -345,8 +358,8 @@ export default {
         console.error('Error al actualizar el producto:', error.response?.data || error.message);
       }
     },
+    // Reinicia los campos del formulario de producto
     resetNewProduct() {
-      // Reinicia los campos del formulario
       this.newProduct = {
         name: '',
         description: '',
@@ -360,6 +373,7 @@ export default {
         imagePreview: null,
       };
     },
+    // Abre el modal para editar un producto existente
     editProduct(product) {
       this.isEditing = true;
       this.editingProductId = product.id;
@@ -377,6 +391,7 @@ export default {
       };
       this.isModalOpen = true;
     },
+    // Elimina un producto por ID
     async deleteProduct(productId) {
       try {
         await axios.delete(`http://localhost:5000/api/products/${productId}`);
@@ -385,6 +400,7 @@ export default {
         console.error('Error al eliminar el producto:', error);
       }
     },
+    // Valida y formatea campos decimales (por ejemplo, precio de compra)
     validateDecimal(field) {
       // Reemplaza comas por puntos para manejar decimales
       this.newProduct[field] = this.newProduct[field]
@@ -393,6 +409,7 @@ export default {
     },
   },
   mounted() {
+    // Al montar, obtiene productos y verifica si hay que editar alguno por query
     this.fetchProducts().then(() => {
       const editId = this.$route.query.edit;
       if (editId) {

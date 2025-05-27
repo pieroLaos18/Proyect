@@ -1,5 +1,6 @@
 <style src="@/assets/css/mainview.css"></style>
 <style>
+/* Estilos para el modal de notificaciones y botones de bajo stock */
 .notification-modal-bg {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -84,14 +85,14 @@
 </style>
 <template>
   <div class="main-container">
-    <!-- Overlay para cerrar el sidebar -->
+    <!-- Overlay para cerrar el sidebar en pantallas pequeñas -->
     <div
       v-if="isSidebarVisible && isSmallScreen"
       class="overlay"
       @click="closeSidebar"
     ></div>
 
-    <!-- Sidebar -->
+    <!-- Sidebar de navegación principal -->
     <aside :class="{ 'sidebar-hidden': !isSidebarVisible, 'sidebar-visible': isSidebarVisible }" class="sidebar">
       <div class="sidebar-header">
         <img :src="userImage || defaultImage" alt="Foto del usuario" class="user-image" />
@@ -107,32 +108,37 @@
       </nav>
     </aside>
 
-    <!-- Main Content -->
+    <!-- Contenido principal -->
     <div class="main-content">
       <header class="app-bar">
         <div class="left-section">
+          <!-- Botón para mostrar/ocultar sidebar -->
           <button class="hamburger-btn" @click="toggleSidebar">
             <i class="fas fa-bars"></i>
           </button>
+          <!-- Nombre del usuario -->
           <span class="user-name">{{ userName }}</span>
+          <!-- Botón de notificaciones de stock bajo -->
           <button class="notification-btn" @click="openNotifications">
             <i class="fas fa-bell"></i>
             <span v-if="notificationCount > 0" class="notification-badge">{{ notificationCount }}</span>
           </button>
+          <!-- Botón para cerrar sesión -->
           <button @click="logout" class="logout-btn">Cerrar Sesión</button>
         </div>
         <div class="right-section">
+          <!-- Botón para cambiar tema claro/oscuro -->
           <div class="theme-toggle">
             <i :class="theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun'" @click="toggleTheme"></i>
           </div>
         </div>
       </header>
 
-      <!-- Contenido dinámico -->
+      <!-- Renderizado de las vistas hijas -->
       <router-view></router-view>
     </div>
 
-    <!-- Modal de inactividad -->
+    <!-- Modal de inactividad por seguridad -->
     <div v-if="showInactivityModal" class="inactivity-modal-bg">
       <div class="inactivity-modal">
         <h2>¿Sigues ahí?</h2>
@@ -142,7 +148,7 @@
       </div>
     </div>
 
-    <!-- Modal de notificaciones de stock bajo -->
+    <!-- Modal de notificaciones de productos con bajo stock -->
     <div v-if="showNotifications" class="notification-modal-bg" @click.self="showNotifications = false">
       <div class="notification-modal">
         <h3>Alertas de Bajo Stock</h3>
@@ -170,53 +176,68 @@
 </template>
 
 <script>
+// Importa la imagen de usuario por defecto
 import defaultUserImage from '../assets/images/profile.png';
 
 export default {
   data() {
     return {
-      isSidebarVisible: false, // Sidebar oculto por defecto en pantallas pequeñas
-      userName: '', // Inicializa el nombre del usuario vacío
-      userImage: '', // URL de la imagen del usuario
-      defaultImage: defaultUserImage, // Imagen predeterminada local
-      isSmallScreen: false, // Detecta si la pantalla es pequeña
-      notificationCount: 3, // Número de notificaciones (ejemplo)
-      theme: 'light', // Tema actual
+      // Estado del sidebar (visible/oculto)
+      isSidebarVisible: false,
+      // Nombre del usuario actual
+      userName: '',
+      // Imagen del usuario actual
+      userImage: '',
+      // Imagen predeterminada si el usuario no tiene foto
+      defaultImage: defaultUserImage,
+      // Indica si la pantalla es pequeña (responsive)
+      isSmallScreen: false,
+      // Número de notificaciones de bajo stock
+      notificationCount: 3,
+      // Tema actual (light/dark)
+      theme: 'light',
+      // Timers para control de inactividad
       inactivityTimer: null,
       warningTimer: null,
+      // Modal de inactividad visible
       showInactivityModal: false,
+      // Límites de tiempo para inactividad y advertencia (ms)
       inactivityLimit: 10 * 60 * 1000, // 10 minutos
       warningLimit: 5 * 60 * 1000, // 5 minutos
+      // Modal de notificaciones visible
       showNotifications: false,
+      // Lista de productos con bajo stock
       lowStockProducts: [],
     };
   },
   created() {
-    console.log('Cargando MainView...');
-    console.log('userName:', localStorage.getItem('userName'));
-    console.log('userImage:', localStorage.getItem('userImage'));
-
+    // Carga datos de usuario desde localStorage
     this.userName = localStorage.getItem('userName') || 'Usuario';
     this.userImage = localStorage.getItem('userImage') || this.defaultImage;
 
+    // Configura el tamaño de pantalla y tema
     this.checkScreenSize();
     window.addEventListener('resize', this.checkScreenSize);
 
     const savedTheme = localStorage.getItem('theme') || 'light';
     this.setTheme(savedTheme);
 
+    // Actualiza notificaciones de bajo stock al iniciar
     this.updateLowStockNotifications();
   },
   mounted() {
+    // Inicia el control de inactividad
     this.resetInactivityTimer();
     window.addEventListener('mousemove', this.resetInactivityTimer);
     window.addEventListener('keydown', this.resetInactivityTimer);
     window.addEventListener('click', this.resetInactivityTimer);
   },
   beforeDestroy() {
+    // Limpia el listener de resize
     window.removeEventListener('resize', this.checkScreenSize);
   },
   beforeUnmount() {
+    // Limpia listeners y timers de inactividad
     window.removeEventListener('mousemove', this.resetInactivityTimer);
     window.removeEventListener('keydown', this.resetInactivityTimer);
     window.removeEventListener('click', this.resetInactivityTimer);
@@ -224,42 +245,46 @@ export default {
     clearTimeout(this.warningTimer);
   },
   methods: {
+    // Muestra/oculta el sidebar
     toggleSidebar() {
       this.isSidebarVisible = !this.isSidebarVisible;
     },
+    // Cierra el sidebar
     closeSidebar() {
       this.isSidebarVisible = false;
     },
+    // Cierra sesión y limpia datos de usuario
     logout() {
-      // Elimina los datos del usuario de localStorage
       localStorage.removeItem('authToken');
       localStorage.removeItem('userName');
       localStorage.removeItem('userImage');
-
-      // Redirige al login
       this.$router.push('/login');
     },
+    // Verifica si la pantalla es pequeña para responsive
     checkScreenSize() {
       this.isSmallScreen = window.innerWidth <= 1024;
       if (!this.isSmallScreen) {
-        this.isSidebarVisible = true; // Sidebar siempre visible en pantallas grandes
+        this.isSidebarVisible = true;
       }
     },
+    // Cambia el tema claro/oscuro
     toggleTheme() {
       const newTheme = this.theme === 'light' ? 'dark' : 'light';
       this.setTheme(newTheme);
     },
+    // Aplica el tema seleccionado
     setTheme(theme) {
       this.theme = theme;
       document.documentElement.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
     },
+    // Reinicia el temporizador de inactividad
     resetInactivityTimer() {
       clearTimeout(this.inactivityTimer);
       clearTimeout(this.warningTimer);
       this.showInactivityModal = false;
 
-      // Muestra el modal a los 5 minutos
+      // Muestra advertencia a los 5 minutos
       this.warningTimer = setTimeout(() => {
         this.showInactivityModal = true;
       }, this.warningLimit);
@@ -269,16 +294,18 @@ export default {
         this.logout();
       }, this.inactivityLimit);
     },
+    // Confirma que el usuario sigue activo
     confirmActivity() {
       this.showInactivityModal = false;
       this.resetInactivityTimer();
     },
+    // Abre el modal de notificaciones y actualiza productos con bajo stock
     async openNotifications() {
       try {
         const res = await fetch('http://localhost:5000/api/products');
         const products = await res.json();
         this.lowStockProducts = products.filter(p => p.stock <= p.stock_min);
-        this.notificationCount = this.lowStockProducts.length; // Actualiza el contador
+        this.notificationCount = this.lowStockProducts.length;
         this.showNotifications = true;
       } catch (e) {
         this.lowStockProducts = [];
@@ -286,6 +313,7 @@ export default {
         this.showNotifications = true;
       }
     },
+    // Actualiza la lista de productos con bajo stock (sin mostrar modal)
     async updateLowStockNotifications() {
       try {
         const res = await fetch('http://localhost:5000/api/products');
@@ -297,9 +325,9 @@ export default {
         this.notificationCount = 0;
       }
     },
+    // Navega a la edición del producto seleccionado desde la notificación
     goToEditProduct(productId) {
       this.showNotifications = false;
-      // Navega a la vista de productos y pasa el ID del producto a editar
       this.$router.push({ 
         path: '/main/products', 
         query: { edit: productId }

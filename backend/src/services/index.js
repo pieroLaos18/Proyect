@@ -1,25 +1,30 @@
-// This file contains the service logic that can be used by controllers to perform specific operations, such as interacting with the database. 
+// Servicios para operaciones de ventas en la base de datos (usados por los controladores)
 
 const db = require('../config/database');
 
+// Obtiene todas las ventas de la base de datos
 const getAllSales = async () => {
-    // Logic to retrieve all sales from the database
+    // Lógica para obtener todas las ventas desde la base de datos
 };
 
+// Obtiene una venta por su ID
 const getSaleById = async (id) => {
-    // Logic to retrieve a sale by its ID from the database
+    // Lógica para obtener una venta por su ID desde la base de datos
 };
 
+// Crea una nueva venta en la base de datos
 const createSale = async (saleData) => {
-    // Logic to create a new sale in the database
+    // Lógica para crear una nueva venta en la base de datos
 };
 
+// Actualiza una venta existente por su ID
 const updateSale = async (id, saleData) => {
-    // Logic to update an existing sale in the database
+    // Lógica para actualizar una venta existente en la base de datos
 };
 
+// Elimina una venta por su ID
 const deleteSale = async (id) => {
-    // Logic to delete a sale from the database
+    // Lógica para eliminar una venta de la base de datos
 };
 
 module.exports = {

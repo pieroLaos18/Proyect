@@ -1,12 +1,16 @@
 <style src="@/assets/css/users.css"></style>
+
 <template>
   <div class="dynamic-content">
     <h1 class="users-title">Usuarios</h1>
     <p class="users-desc">Gestión de usuarios registrados en el sistema.</p>
 
     <div class="users-actions">
+      <!-- Aquí puedes agregar botones para agregar usuarios si lo deseas -->
+      <!-- <button class="btn-primary" @click="showForm = true">Agregar Usuario</button> -->
     </div>
 
+    <!-- Tabla de usuarios -->
     <div class="users-table-section">
       <table class="users-table">
         <thead>
@@ -36,7 +40,7 @@
       </table>
     </div>
 
-    <!-- Modal Usuario -->
+    <!-- Modal para agregar/editar usuario -->
     <div v-if="showForm" class="modal-bg" @click.self="cancelForm">
       <div class="modal">
         <h2>{{ editingUser ? 'Editar Rol de Usuario' : 'Agregar Usuario' }}</h2>
@@ -61,14 +65,19 @@
 </template>
 
 <script>
+// Importa axios para llamadas HTTP
 import axios from 'axios';
 
 export default {
   data() {
     return {
+      // Lista de usuarios
       users: [],
+      // Controla la visibilidad del modal de usuario
       showForm: false,
+      // Usuario en edición (null si es nuevo)
       editingUser: null,
+      // Datos del formulario de usuario
       form: {
         name: '',
         email: '',
@@ -77,9 +86,11 @@ export default {
     };
   },
   created() {
+    // Carga los usuarios al iniciar el componente
     this.fetchUsers();
   },
   methods: {
+    // Obtiene la lista de usuarios desde la API
     async fetchUsers() {
       try {
         const response = await axios.get('/api/users');
@@ -88,11 +99,13 @@ export default {
         console.error('Error al cargar usuarios:', error);
       }
     },
+    // Abre el modal para editar un usuario
     editUser(user) {
       this.editingUser = user;
       this.form = { ...user };
       this.showForm = true;
     },
+    // Elimina un usuario por ID
     async deleteUser(id) {
       try {
         await axios.delete(`/api/users/${id}`);
@@ -101,6 +114,7 @@ export default {
         console.error('Error al eliminar usuario:', error);
       }
     },
+    // Guarda los cambios del usuario (solo rol)
     async saveUser() {
       if (this.editingUser) {
         try {
@@ -112,6 +126,7 @@ export default {
       }
       this.cancelForm();
     },
+    // Cancela y cierra el formulario/modal
     cancelForm() {
       this.showForm = false;
       this.editingUser = null;

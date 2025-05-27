@@ -1,7 +1,11 @@
 <style src="@/assets/css/dashboard.css"></style>
+
 <template>
   <div class="dynamic-content">
+    <!-- Título principal del dashboard -->
     <h1 class="dashboard-title">Escritorio</h1>
+
+    <!-- Tarjetas resumen de ventas y usuarios -->
     <div class="dashboard-cards">
       <div class="card">
         <div class="card-icon ventas"><i class="fas fa-cash-register"></i></div>
@@ -20,6 +24,7 @@
       </div>
     </div>
 
+    <!-- Sección de productos destacados -->
     <div class="dashboard-section">
       <h2 class="section-title">Productos Destacados</h2>
       <ul class="productos-list">
@@ -30,6 +35,8 @@
         </li>
       </ul>
     </div>
+
+    <!-- Sección de gráfica de ventas -->
     <div class="dashboard-section">
       <h2 class="section-title">Gráfica de Ventas (Últimos 7 días)</h2>
       <div class="chart-placeholder">
@@ -50,6 +57,7 @@
       </div>
     </div>
 
+    <!-- Sección de últimas actividades -->
     <div class="dashboard-section">
       <h2 class="section-title">Últimas Actividades</h2>
       <ul class="actividades-list">
@@ -68,35 +76,43 @@ import axios from 'axios';
 export default {
   data() {
     return {
+      // Resumen de ventas (hoy y mes)
       resumenVentas: {
         hoy: 0,
         mes: 0,
       },
+      // Resumen de usuarios activos
       resumenUsuarios: {
         activos: 0,
       },
+      // Lista de productos destacados
       productosDestacados: [],
+      // Lista de últimas actividades
       ultimasActividades: [],
-      ventasPorDia: [], // <-- nuevo
+      // Ventas por día para la gráfica
+      ventasPorDia: [],
     };
   },
   mounted() {
+    // Carga los datos al montar el componente
     this.cargarResumenVentas();
     this.cargarResumenUsuarios();
     this.cargarProductosDestacados();
     this.cargarUltimasActividades();
-    this.cargarVentasPorDia(); // <-- nuevo
+    this.cargarVentasPorDia();
   },
   methods: {
+    // Obtiene el resumen de ventas (hoy y mes)
     async cargarResumenVentas() {
       try {
         const res = await axios.get('/api/sales/resumen');
-        console.log('Resumen ventas:', res.data); // <-- agrega esto
+        console.log('Resumen ventas:', res.data); // Para depuración
         this.resumenVentas = res.data;
       } catch (e) {
         console.error('Error al cargar resumen de ventas', e);
       }
     },
+    // Obtiene el resumen de usuarios activos
     async cargarResumenUsuarios() {
       try {
         const res = await axios.get('/api/users/activos');
@@ -105,6 +121,7 @@ export default {
         console.error('Error al cargar usuarios activos', e);
       }
     },
+    // Obtiene los productos destacados
     async cargarProductosDestacados() {
       try {
         const res = await axios.get('/api/products/destacados');
@@ -113,6 +130,7 @@ export default {
         console.error('Error al cargar productos destacados', e);
       }
     },
+    // Obtiene las últimas actividades
     async cargarUltimasActividades() {
       try {
         const res = await axios.get('/api/actividades/ultimas');
@@ -121,6 +139,7 @@ export default {
         console.error('Error al cargar últimas actividades', e);
       }
     },
+    // Obtiene las ventas por día para la gráfica
     async cargarVentasPorDia() {
       try {
         const res = await axios.get('/api/sales/ventas-por-dia');
@@ -129,6 +148,7 @@ export default {
         console.error('Error al cargar ventas por día', e);
       }
     },
+    // Calcula la altura de cada barra en la gráfica de ventas
     calcularAlturaBarra(total) {
       const maxVenta = Math.max(...this.ventasPorDia.map(v => v.total));
       return (total / maxVenta) * 100;

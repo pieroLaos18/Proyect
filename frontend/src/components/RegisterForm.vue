@@ -1,20 +1,24 @@
-<!-- filepath: frontend/src/components/RegisterForm.vue -->
+<!-- Componente de formulario de registro de usuario -->
 
 <style src="@/assets/css/registerform.css"></style>
+
 <template>
   <div class="page-container">
+    <!-- Panel izquierdo con texto o imagen -->
     <div class="left-panel">
-      <!-- Aquí va el texto o imagen, por ejemplo: -->
       <div class="image-content">
         <h2>Lorem Ipsum is simply</h2>
         <p>Texto descriptivo o imagen aquí...</p>
       </div>
     </div>
+    <!-- Panel derecho con el formulario de registro -->
     <div class="right-panel">
-      <!-- Aquí va tu formulario de registro -->
       <div class="register-container">
         <h1>Registrarse</h1>
-        <p>Si ya tienes una cuenta, <router-link to="/login">inicia sesión aquí</router-link>.</p>
+        <p>
+          Si ya tienes una cuenta,
+          <router-link to="/login">inicia sesión aquí</router-link>.
+        </p>
         <form @submit.prevent="handleRegister">
           <div class="form-group">
             <label for="firstName">Nombre:</label>
@@ -61,21 +65,26 @@
 </template>
 
 <script>
+// Importa el servicio de API para registrar usuarios
 import api from '../services/api';
 
 export default {
   data() {
     return {
+      // Campos del formulario de registro
       email: '',
       password: '',
       nombre: '',
       apellido: '',
       direccion: '',
-      success: null, // Variable para el mensaje de éxito
-      error: null, // Variable para el mensaje de error
+      // Mensaje de éxito
+      success: null,
+      // Mensaje de error
+      error: null,
     };
   },
   methods: {
+    // Maneja el envío del formulario de registro
     async handleRegister() {
       try {
         const response = await api.post('/register', {
@@ -104,5 +113,3 @@ export default {
   },
 };
 </script>
-
-

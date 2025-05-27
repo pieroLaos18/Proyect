@@ -1,3 +1,5 @@
+// Configuración de rutas de Vue Router para la aplicación
+
 import { createRouter, createWebHistory } from 'vue-router';
 import MainView from '../views/MainView.vue';
 import Dashboard from '../views/Dashboard.vue';
@@ -8,6 +10,7 @@ import Users from '../views/Users.vue';
 import Login from '../views/LoginView.vue';
 import Register from '../views/RegisterView.vue'; // Importa el componente de registro
 
+// Definición de rutas de la aplicación
 const routes = [
   { path: '/', redirect: '/main' },
   { path: '/login', name: 'Login', component: Login },
@@ -16,7 +19,7 @@ const routes = [
     path: '/main',
     name: 'MainView',
     component: MainView,
-    meta: { requiresAuth: true }, // <--- PROTEGIDA
+    meta: { requiresAuth: true }, // Ruta protegida, requiere autenticación
     children: [
       { path: 'dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
       { path: 'products', name: 'Products', component: Products, meta: { requiresAuth: true } },
@@ -27,11 +30,13 @@ const routes = [
   },
 ];
 
+// Crea la instancia de Vue Router
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
 
+// Guard de navegación global para proteger rutas y redirigir según autenticación
 router.beforeEach((to, from, next) => {
   const isAuthenticated = !!localStorage.getItem('authToken');
 

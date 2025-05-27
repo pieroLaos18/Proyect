@@ -3,34 +3,40 @@ import 'vue-datepicker-next/index.css';
 
 <template>
   <div id="app">
-    <!-- Ícono para cambiar de modo -->
+    <!-- Ícono para cambiar de modo (claro/oscuro) -->
     <div class="theme-toggle">
       <i :class="theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun'" @click="toggleTheme"></i>
     </div>
+    <!-- Renderiza la vista correspondiente según la ruta -->
     <router-view />
   </div>
 </template>
 
 <script>
+// Componente principal de la aplicación
 export default {
   name: 'App',
   data() {
     return {
+      // Tema actual (light/dark)
       theme: 'light',
     };
   },
   mounted() {
+    // Al montar, aplica el tema guardado en localStorage o el tema claro por defecto
     const savedTheme = localStorage.getItem('theme') || 'light';
     this.setTheme(savedTheme);
   },
   methods: {
+    // Cambia entre tema claro y oscuro
     toggleTheme() {
       const newTheme = this.theme === 'light' ? 'dark' : 'light';
       this.setTheme(newTheme);
     },
+    // Aplica el tema seleccionado y lo guarda en localStorage
     setTheme(theme) {
       this.theme = theme;
-      document.documentElement.setAttribute('data-theme', theme); // Asegúrate de que se aplique aquí
+      document.documentElement.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
     },
   },
@@ -38,6 +44,7 @@ export default {
 </script>
 
 <style>
+/* Estilos globales para la app */
 #app {
   min-height: 100vh;
   background: var(--background-color, #f8fafd);
@@ -90,4 +97,3 @@ export default {
   }
 }
 </style>
-

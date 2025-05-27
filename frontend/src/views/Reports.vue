@@ -5,13 +5,16 @@
     <h1>Reportes</h1>
     <p>Visualización de reportes.</p>
     <div class="filters">
+      <!-- Filtros de fecha -->
       <label>Desde: <input type="date" v-model="fromDate" /></label>
       <label>Hasta: <input type="date" v-model="toDate" /></label>
+      <!-- Botones de acciones -->
       <button @click="fetchReport">Generar</button>
       <button @click="exportCSV" :disabled="!reportData.length">Exportar CSV</button>
       <button @click="exportExcel" :disabled="!reportData.length">Exportar Excel</button>
       <button @click="exportPDF" :disabled="!reportData.length">Exportar PDF</button>
     </div>
+    <!-- Tabla de reportes -->
     <table v-if="reportData.length">
       <thead>
         <tr>
@@ -37,6 +40,7 @@
 </template>
 
 <script>
+// Importa librerías para exportar reportes
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -44,12 +48,15 @@ import autoTable from 'jspdf-autotable';
 export default {
   data() {
     return {
+      // Fechas para filtrar el reporte
       fromDate: '',
       toDate: '',
+      // Datos del reporte
       reportData: []
     }
   },
   methods: {
+    // Obtiene los datos del reporte desde la API
     async fetchReport() {
       try {
         let url = '/api/reports/by-date';
@@ -66,13 +73,14 @@ export default {
           product: item.product,
           quantity: item.cantidad,  // Cambia 'cantidad' a 'quantity'
           total: item.total,
-          usuario: item.usuario // Nuevo campo
+          usuario: item.usuario     // Usuario que realizó la venta
         }));
       } catch (error) {
         alert('No se pudieron cargar los reportes.');
         this.reportData = [];
       }
     },
+    // Exporta el reporte a CSV
     exportCSV() {
       const headers = ['Fecha', 'Producto', 'Cantidad', 'Total', 'Usuario'];
       const rows = this.reportData.map(item => [
@@ -88,6 +96,7 @@ export default {
       link.click();
       document.body.removeChild(link);
     },
+    // Exporta el reporte a Excel
     exportExcel() {
       const ws = XLSX.utils.json_to_sheet(this.reportData.map(item => ({
         Fecha: item.date,
@@ -100,6 +109,7 @@ export default {
       XLSX.utils.book_append_sheet(wb, ws, "Reporte");
       XLSX.writeFile(wb, "reporte.xlsx");
     },
+    // Exporta el reporte a PDF
     exportPDF() {
       const doc = new jsPDF();
       doc.text("Reporte de Ventas", 14, 10);

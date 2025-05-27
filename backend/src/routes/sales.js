@@ -1,8 +1,10 @@
+// Rutas para gestión de ventas en la API
+
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
 
-// Obtener todas las ventas
+// Obtener todas las ventas y sus productos asociados
 router.get('/', async (req, res) => {
   try {
     // Obtén todas las ventas
@@ -24,6 +26,8 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Error al obtener ventas' });
   }
 });
+
+// Resumen de ventas (hoy y mes actual, solo no anuladas)
 router.get('/resumen', async (req, res) => {
   try {
     // Ventas de hoy (solo no anuladas)
@@ -86,7 +90,7 @@ router.get('/ventas-por-dia', async (req, res) => {
   }
 });
 
-// Obtener detalle de una venta
+// Obtener detalle de una venta por ID
 router.get('/:id', async (req, res) => {
   try {
     const [venta] = await pool.query('SELECT * FROM ventas WHERE id = ?', [req.params.id]);
@@ -107,7 +111,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Registrar una venta
+// Registrar una nueva venta y actualizar stock
 router.post('/', async (req, res) => {
   const { cliente, productos, subtotal, impuesto, total, user_id, metodo_pago } = req.body;
   const conn = await pool.getConnection();
@@ -156,7 +160,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Anular una venta
+// Anular una venta, recuperar stock y registrar actividad
 router.put('/anular/:id', async (req, res) => {
   const { motivo, user_id } = req.body; // <-- Asegúrate de recibir el user_id
   const ventaId = req.params.id;
@@ -216,4 +220,3 @@ router.put('/anular/:id', async (req, res) => {
 });
 
 module.exports = router;
-

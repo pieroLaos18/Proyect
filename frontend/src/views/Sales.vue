@@ -1,4 +1,5 @@
 <style src="@/assets/css/sales.css"></style>
+
 <template>
   <div class="dynamic-content">
     <h1 class="sales-title">Ventas</h1>
@@ -15,6 +16,7 @@
       <input class="sales-search" v-model="busqueda" placeholder="Buscar por cliente o producto..." />
     </div>
 
+    <!-- Tabla de ventas -->
     <div class="sales-table-section">
       <table class="sales-table">
         <thead>
@@ -67,6 +69,7 @@
           <label>Cliente:</label>
           <input v-model="nueva.cliente" required />
 
+          <!-- Selección y agregado de productos -->
           <div class="producto-row">
             <div style="flex:2;">
               <label>Buscar producto:</label>
@@ -124,6 +127,7 @@
             </tbody>
           </table>
 
+          <!-- Resumen de totales -->
           <label>Subtotal:</label>
           <input :value="subtotal.toFixed(2)" readonly />
 
@@ -133,6 +137,7 @@
           <label>Total:</label>
           <input :value="totalConImpuesto" readonly />
 
+          <!-- Selección de método de pago -->
           <label>Método de Pago:</label>
           <select v-model="metodoPago">
             <option value="efectivo">Efectivo</option>
@@ -228,13 +233,15 @@
 </template>
 
 <script>
+// Importa servicios y librerías necesarias
 import salesService from '@/services/sales';
-import productsService from '@/services/products'; // <--- Importa el servicio
+import productsService from '@/services/products';
 import { jsPDF } from "jspdf";
 
 export default {
   data() {
     return {
+      // Filtros y datos de ventas
       busqueda: "",
       ventas: [],
       modalNuevaVenta: false,
@@ -263,10 +270,12 @@ export default {
     };
   },
   async mounted() {
+    // Carga ventas y productos al iniciar
     await this.fetchVentas();
-    await this.fetchProductos(); // <--- Llama aquí
+    await this.fetchProductos();
   },
   computed: {
+    // Filtra ventas por cliente o producto
     ventasFiltradas() {
       if (!this.busqueda) return this.ventas;
       const b = this.busqueda.toLowerCase();
@@ -276,15 +285,19 @@ export default {
           v.productos.some(p => (p.name || '').toLowerCase().includes(b))
       );
     },
+    // Calcula subtotal de la venta actual
     subtotal() {
       return this.nueva.productos.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
     },
+    // Calcula el impuesto de la venta actual
     impuesto() {
       return (this.subtotal * this.impuestoPorcentaje / 100).toFixed(2);
     },
+    // Calcula el total con impuesto
     totalConImpuesto() {
       return (parseFloat(this.subtotal) + parseFloat(this.impuesto)).toFixed(2);
     },
+    // Total de productos en la venta actual
     totalProductos() {
       return this.nueva.productos
         .reduce((sum, p) => sum + (p.cantidad * p.precio), 0)
@@ -292,6 +305,7 @@ export default {
     },
   },
   watch: {
+    // Actualiza productos filtrados y seleccionados al buscar
     productoBuscado(val) {
       this.filtrarProductos();
       const prod = this.productosDisponibles.find(p => (p.name || '').toLowerCase() === (val || '').toLowerCase());
@@ -299,6 +313,7 @@ export default {
     }
   },
   methods: {
+    // Obtiene todas las ventas desde el servicio
     async fetchVentas() {
       try {
         const res = await salesService.getAll();
@@ -307,6 +322,7 @@ export default {
         alert('Error al cargar ventas');
       }
     },
+    // Obtiene todos los productos desde el servicio
     async fetchProductos() {
       try {
         const res = await productsService.getAll();
@@ -315,6 +331,7 @@ export default {
         alert('Error al cargar productos');
       }
     },
+    // Registra una nueva venta y actualiza stock
     async registrarVenta() {
       if (!this.nueva.cliente || this.nueva.productos.length === 0) return;
 
@@ -343,10 +360,8 @@ export default {
         // Actualizar stock de cada producto vendido
         for (const prod of this.nueva.productos) {
           const productoOriginal = this.productosDisponibles.find(p => p.id === prod.id);
-          console.log('Producto original:', productoOriginal);
           if (productoOriginal) {
             const nuevoStock = productoOriginal.stock - prod.cantidad;
-            console.log(`Actualizando producto ${prod.id} a stock ${nuevoStock}`);
             await productsService.update(prod.id, {
               name: productoOriginal.name,
               description: productoOriginal.description,
@@ -354,15 +369,14 @@ export default {
               purchase_price: productoOriginal.purchase_price,
               category: productoOriginal.category,
               stock: nuevoStock,
-              stock_min: productoOriginal.stock_min,   // <--- Agrega esto
-              stock_max: productoOriginal.stock_max,   // <--- Y esto
-              image: productoOriginal.image // si tu backend lo requiere
+              stock_min: productoOriginal.stock_min,
+              stock_max: productoOriginal.stock_max,
+              image: productoOriginal.image
             });
           }
         }
 
         this.$root.$emit('actualizarLowStock');
-
         await this.fetchVentas();
         await this.fetchProductos();
         this.nueva = { cliente: "", productos: [], total: null };
@@ -373,6 +387,7 @@ export default {
         alert('Error al registrar venta');
       }
     },
+    // Abre el modal de detalle de venta
     async abrirDetalle(venta) {
       try {
         const res = await salesService.getById(venta.id);
@@ -381,7 +396,7 @@ export default {
           ...res.data,
           productos: (res.data.productos || []).map(p => ({
             ...p,
-            precio: p.precio !== undefined ? p.precio : p.price // usa precio o price
+            precio: p.precio !== undefined ? p.precio : p.price
           }))
         };
         this.modalDetalle = true;
@@ -389,6 +404,7 @@ export default {
         alert('Error al obtener detalle');
       }
     },
+    // Agrega un producto a la venta actual
     agregarProducto() {
       if (this.productoSeleccionado && this.productoTemp.cantidad > 0) {
         this.nueva.productos.push({
@@ -402,30 +418,36 @@ export default {
         this.productoTemp = { cantidad: 1 };
       }
     },
+    // Elimina un producto de la venta actual
     eliminarProducto(idx) {
       this.nueva.productos.splice(idx, 1);
     },
+    // Filtra productos disponibles según búsqueda
     filtrarProductos() {
       const b = (this.productoBuscado || '').toLowerCase();
       this.productosFiltrados = this.productosDisponibles.filter(p =>
         (p.name || '').toLowerCase().includes(b)
       );
     },
+    // Muestra una notificación personalizada
     mostrarNotificacion(msg) {
       this.notificacion.mensaje = msg;
       this.notificacion.visible = true;
       setTimeout(() => {
         this.notificacion.visible = false;
-      }, 3500); // Se oculta automáticamente después de 3.5s
+      }, 3500);
     },
+    // Abre el modal para anular una venta
     abrirModalAnulacion(venta) {
       this.ventaAAnular = venta;
       this.motivoAnulacion = '';
     },
+    // Cierra el modal de anulación
     cerrarModalAnulacion() {
       this.ventaAAnular = null;
       this.motivoAnulacion = '';
     },
+    // Anula una venta y actualiza la lista
     async anularVenta() {
       if (!this.motivoAnulacion.trim()) {
         this.mostrarNotificacion('Debe ingresar un motivo de anulación.');
@@ -435,12 +457,13 @@ export default {
         await salesService.anular(this.ventaAAnular.id, { motivo: this.motivoAnulacion });
         this.mostrarNotificacion('Venta anulada correctamente');
         await this.fetchVentas();
-        this.$emit('actualizar-dashboard'); // Si usas eventos
+        this.$emit('actualizar-dashboard');
         this.cerrarModalAnulacion();
       } catch (e) {
         this.mostrarNotificacion('Error al anular venta');
       }
     },
+    // Imprime la boleta de la venta
     imprimirBoleta() {
       const contenido = document.getElementById('boleta-contenido').innerHTML;
       const ventana = window.open('', '', 'width=800,height=600');
@@ -465,6 +488,7 @@ export default {
       ventana.focus();
       ventana.print();
     },
+    // Descarga la boleta de la venta como PDF
     descargarBoletaPDF() {
       const doc = new jsPDF();
       const venta = this.detalleVenta;

@@ -1,11 +1,14 @@
+// Rutas para generación de reportes en la API
+
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
 
 // Reporte de ventas por rango de fechas
 router.get('/by-date', async (req, res) => {
-  let { from, to, user } = req.query; // Supón que envías el usuario que genera el reporte
+  let { from, to, user } = req.query; // Usuario que genera el reporte (opcional)
   try {
+    // Consulta para obtener ventas con detalles y usuario
     let query = `
       SELECT v.id, v.fecha, p.name as product, dv.cantidad, (dv.cantidad * dv.precio_unitario) as total,
              u.nombre as usuario
@@ -22,7 +25,7 @@ router.get('/by-date', async (req, res) => {
     query += ' ORDER BY v.fecha ASC';
     const [ventas] = await pool.query(query, params);
 
-    // Registrar actividad
+    // Registrar actividad de generación de reporte
     await pool.query(
       'INSERT INTO activities (descripcion) VALUES (?)',
       [`Reporte de ventas generado${user ? ' por ' + user : ''} (${from || 'inicio'} a ${to || 'hoy'})`]

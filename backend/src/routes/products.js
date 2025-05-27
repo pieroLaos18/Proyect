@@ -1,3 +1,5 @@
+// Rutas para gestión de productos en la API
+
 const express = require('express');
 const pool = require('../db'); // Conexión a la base de datos
 const multer = require('multer');
@@ -5,6 +7,7 @@ const path = require('path');
 
 const router = express.Router();
 
+// Configuración de almacenamiento para imágenes de productos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../../uploads')); // Ruta absoluta a la carpeta 'uploads'
@@ -16,12 +19,10 @@ const storage = multer.diskStorage({
   },
 });
 
+// Filtro para aceptar solo imágenes válidas
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    console.log('file.originalname:', file.originalname);
-    console.log('file.mimetype:', file.mimetype);
-
     const allowedExtensions = ['.jpeg', '.jpg', '.png', '.gif'];
     const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -47,7 +48,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Productos más vendidos
+// Productos más vendidos (destacados)
 router.get('/destacados', async (req, res) => {
   try {
     const [rows] = await pool.query(`

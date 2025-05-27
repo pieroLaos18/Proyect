@@ -1,8 +1,10 @@
+// Rutas para gestión de usuarios en la API
+
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2/promise');
 
-// Configura tu conexión MySQL
+// Configura el pool de conexión MySQL
 const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
@@ -22,7 +24,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Obtener cantidad de usuarios activos
+// Obtener cantidad de usuarios activos (último login en 24h)
 router.get('/activos', async (req, res) => {
   try {
     const [rows] = await pool.query(
