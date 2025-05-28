@@ -16,6 +16,11 @@
   --accent: #ffb300;
   --divider: #e0e0e0;
   --card-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  --danger: #b10000;
+  --danger-bg: #ffebee;
+  --danger-border: #ff3333;
+  --btn-gradient: linear-gradient(90deg, #43cea2 60%, #185a9d 100%);
+  --btn-gradient-hover: linear-gradient(90deg, #185a9d 60%, #43cea2 100%);
 }
 
 [data-theme="dark"] {
@@ -36,6 +41,11 @@
   --accent: #ffd54f;
   --divider: #333a44;
   --card-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  --danger: #ff6666;
+  --danger-bg: #7a1f1f;
+  --danger-border: #ff6666;
+  --btn-gradient: linear-gradient(90deg, #26a69a 60%, #00695c 100%);
+  --btn-gradient-hover: linear-gradient(90deg, #00695c 60%, #26a69a 100%);
 }
 
 /* Fondo general de la página */
@@ -226,10 +236,11 @@ form {
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.3s;
+  background: var(--btn-gradient);
 }
 
 .btn-register:hover {
-  background-color: var(--primary-hover-color);
+  background: var(--btn-gradient-hover);
 }
 
 /* Puedes poner esto en global.css o en el style scoped del componente del AppBar */
