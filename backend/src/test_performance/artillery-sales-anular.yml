@@ -1,0 +1,12 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 1
+      arrivalRate: 300
+scenarios:
+  - flow:
+      - put:
+          url: "/api/sales/anular/3080"
+          json:
+            motivo: "Prueba de anulación"
+            user_id: 1

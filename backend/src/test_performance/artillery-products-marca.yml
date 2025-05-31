@@ -1,0 +1,9 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 1
+      arrivalRate: 300
+scenarios:
+  - flow:
+      - get:
+          url: "/api/products/marca/1" # Cambia el ID según tus marcas reales

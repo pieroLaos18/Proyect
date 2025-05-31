@@ -1,32 +1,42 @@
 <!-- Componente de formulario de inicio de sesión -->
 
-<style src="@/assets/css/loginform.css"></style>
+<style scoped src="@/assets/css/loginform.css"></style>
 
 <template>
   <div class="page-container">
-    <div class="login-container">
-      <h1>Iniciar Sesión</h1>
-      <p>¿No tienes una cuenta? <a href="/register">Regístrate aquí</a>.</p>
+    <div class="background-decor"></div>
+    <div class="login-container glass">
+      <div class="login-header">
+        <div class="login-logo enhanced-logo">
+          <i class="fas fa-store"></i>
+        </div>
+        <h1>Bienvenido</h1>
+        <p class="subtitle">Inicia sesión para continuar</p>
+      </div>
       <form @submit.prevent="handleLogin">
         <div class="form-group">
-          <label for="email">Correo Electrónico:</label>
-          <div class="input-container">
+          <label for="email">Correo Electrónico</label>
+          <div class="input-container enhanced-input">
             <i class="fas fa-envelope"></i>
             <input type="email" id="email" v-model="email" placeholder="Ingresa tu correo" required />
           </div>
         </div>
         <div class="form-group">
-          <label for="password">Contraseña:</label>
-          <div class="input-container">
+          <label for="password">Contraseña</label>
+          <div class="input-container enhanced-input">
             <i class="fas fa-lock"></i>
             <input type="password" id="password" v-model="password" placeholder="Ingresa tu contraseña" required />
           </div>
         </div>
-        <button type="submit" class="btn-login">Iniciar Sesión</button>
+        <div class="form-actions">
+          <button type="submit" class="btn-login enhanced-btn">Iniciar Sesión</button>
+        </div>
         <p v-if="error" class="login-error">{{ error }}</p>
-        <p class="forgot-password">
-          <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
-        </p>
+        <div class="extra-links">
+          <a href="/forgot-password" class="forgot-password">¿Olvidaste tu contraseña?</a>
+          <span>·</span>
+          <a href="/register" class="register-link">Crear cuenta</a>
+        </div>
       </form>
     </div>
   </div>
@@ -57,20 +67,33 @@ export default {
     async handleLogin() {
       try {
         // Realiza la petición de login a la API
-        const response = await axios.post('http://localhost:5000/api/auth/login', {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
           correo_electronico: this.email,
           password: this.password,
         });
+
+        // Agrega este log para ver qué trae el usuario:
+        console.log('Usuario recibido:', response.data.user);
 
         // Guarda el token y datos del usuario en localStorage
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('userName', response.data.user.name);
         localStorage.setItem('userId', response.data.user.id);
+        localStorage.setItem('userEmail', response.data.user.email);
+        localStorage.setItem('userRole', response.data.user.rol.toLowerCase());
 
-        // Redirige al dashboard principal
-        this.$router.push('/main/dashboard');
+        // Redirige según el rol
+        const rol = response.data.user.rol?.toLowerCase();
+        if (rol === 'admin' || rol === 'supervisor') {
+          this.$router.push('/main/dashboard');
+        } else if (rol === 'cajero') {
+          this.$router.push('/main/sales');
+        } else if (rol === 'almacenero') {
+          this.$router.push('/main/products');
+        } else {
+          this.$router.push('/main/dashboard'); // Fallback
+        }
       } catch (error) {
-        // Muestra el mensaje de error si la autenticación falla
         console.error('Error al iniciar sesión:', error);
         this.error = error.response?.data?.message || 'Error al iniciar sesión';
       }

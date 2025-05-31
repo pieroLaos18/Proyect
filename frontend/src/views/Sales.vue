@@ -1,30 +1,35 @@
 <style src="@/assets/css/sales.css"></style>
 
 <template>
-  <div class="dynamic-content">
-    <h1 class="sales-title">Ventas</h1>
-    <p class="sales-desc">Gestión de ventas realizadas en el sistema.</p>
-
-    <!-- Notificación personalizada -->
-    <div v-if="notificacion.visible" class="notificacion-error">
-      <span>{{ notificacion.mensaje }}</span>
-      <button @click="notificacion.visible = false" class="cerrar-notificacion">&times;</button>
+  <div class="dynamic-content sales-modern">
+    <div class="sales-background-decor"></div>
+    <div class="sales-header-card">
+      <div class="sales-header-title">
+        <div class="sales-header-icon">
+          <i class="fas fa-cash-register"></i>
+        </div>
+        <div>
+          <h1 class="sales-title">Ventas</h1>
+          <p class="sales-desc">Gestión de ventas realizadas en el sistema.</p>
+        </div>
+      </div>
+      <button class="btn-primary" @click="modalNuevaVenta = true">
+        <i class="fas fa-plus"></i> Registrar Venta
+      </button>
     </div>
 
     <div class="sales-actions">
-      <button class="btn-primary" @click="modalNuevaVenta = true">+ Registrar Venta</button>
       <input class="sales-search" v-model="busqueda" placeholder="Buscar por cliente o producto..." />
     </div>
 
     <!-- Tabla de ventas -->
-    <div class="sales-table-section">
+    <div class="sales-table-section modern-table-card">
       <table class="sales-table">
         <thead>
           <tr>
             <th>#</th>
             <th>Fecha</th>
             <th>Cliente</th>
-            <th>Productos</th>
             <th>Total</th>
             <th>Acciones</th>
           </tr>
@@ -34,28 +39,26 @@
             <td>{{ venta.id }}</td>
             <td>{{ venta.fecha }}</td>
             <td>{{ venta.cliente }}</td>
-            <td>
-              <ul>
-                <li v-for="prod in venta.productos" :key="prod.id">
-                  {{ prod.name }} <span v-if="prod.cantidad">x{{ prod.cantidad }}</span>
-                </li>
-              </ul>
-            </td>
-            <td>S/ {{ venta.total }}</td>
+            <td><span class="total-badge">S/ {{ venta.total }}</span></td>
             <td>
               <div class="acciones-btns">
-                <button class="btn-ver" @click="abrirDetalle(venta)">Ver</button>
+                <button class="btn-ver" @click="abrirDetalle(venta)">
+                  <i class="fas fa-eye"></i>
+                </button>
                 <button
                   v-if="!venta.anulada"
                   class="btn-anular"
                   @click="abrirModalAnulacion(venta)"
-                >Anular</button>
+                  title="Anular"
+                >
+                  <i class="fas fa-ban"></i>
+                </button>
                 <span v-else class="venta-anulada-label">Anulada</span>
               </div>
             </td>
           </tr>
           <tr v-if="ventasFiltradas.length === 0">
-            <td colspan="6" style="text-align:center;">No hay ventas registradas.</td>
+            <td colspan="5" style="text-align:center;">No hay ventas registradas.</td>
           </tr>
         </tbody>
       </table>
@@ -64,91 +67,48 @@
     <!-- Modal Nueva Venta -->
     <div v-if="modalNuevaVenta" class="modal-bg" @click.self="modalNuevaVenta = false">
       <div class="modal modal-venta">
-        <h2>Nueva Venta</h2>
-        <form @submit.prevent="registrarVenta">
-          <label>Cliente:</label>
-          <input v-model="nueva.cliente" required />
-
-          <!-- Selección y agregado de productos -->
-          <div class="producto-row">
-            <div style="flex:2;">
-              <label>Buscar producto:</label>
-              <input
-                v-model="productoBuscado"
-                placeholder="Buscar producto..."
-                @input="filtrarProductos"
-                list="lista-productos"
-              />
-              <datalist id="lista-productos">
-                <option
-                  v-for="prod in productosFiltrados"
-                  :key="prod.id"
-                  :value="prod.name"
-                />
-              </datalist>
-            </div>
-            <div style="flex:1;">
-              <label>Cantidad:</label>
-              <input v-model.number="productoTemp.cantidad" type="number" min="1" placeholder="Cantidad" />
-            </div>
-            <div style="flex:1;">
-              <label>Precio:</label>
-              <input :value="productoSeleccionado ? productoSeleccionado.precio : ''" readonly />
-            </div>
-            <button
-              type="button"
-              class="btn-primary agregar-btn"
-              @click="agregarProducto"
-              :disabled="!productoSeleccionado || productoTemp.cantidad < 1"
-            >Agregar</button>
+        <div class="modal-header">
+          <div class="modal-icon">
+            <i class="fas fa-plus-circle"></i>
           </div>
-
-          <!-- Tabla de productos agregados -->
-          <table v-if="nueva.productos.length" class="sales-table" style="min-width:700px">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio</th>
-                <th>Subtotal</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(prod, idx) in nueva.productos" :key="idx">
-                <td>{{ prod.name }}</td>
-                <td>{{ prod.cantidad }}</td>
-                <td>S/ {{ prod.precio }}</td>
-                <td>S/ {{ (prod.cantidad * prod.precio).toFixed(2) }}</td>
-                <td>
-                  <button type="button" class="btn-ver" @click="eliminarProducto(idx)">Quitar</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Resumen de totales -->
-          <label>Subtotal:</label>
-          <input :value="subtotal.toFixed(2)" readonly />
-
-          <label>Impuesto ({{ impuestoPorcentaje }}%):</label>
-          <input :value="impuesto" readonly />
-
-          <label>Total:</label>
-          <input :value="totalConImpuesto" readonly />
-
-          <!-- Selección de método de pago -->
-          <label>Método de Pago:</label>
-          <select v-model="metodoPago">
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="otros">Otros</option>
-          </select>
-          <input v-if="metodoPago === 'otros'" v-model="otrosMetodoPago" placeholder="Especifique el método" />
-
+          <h2>Nueva Venta</h2>
+          <button class="modal-close" @click="modalNuevaVenta = false">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form @submit.prevent="registrarVenta">
+          <div class="form-group">
+            <label for="cliente">Cliente</label>
+            <input id="cliente" v-model="nueva.cliente" required placeholder="Nombre del cliente" />
+          </div>
+          <div class="form-group">
+            <label for="producto">Producto</label>
+            <select id="producto" v-model="productoSeleccionado">
+              <option disabled value="">Selecciona un producto</option>
+              <option v-for="p in productosDisponibles" :key="p.id" :value="p">{{ p.name }}</option>
+            </select>
+            <button type="button" class="agregar-btn" @click="agregarProducto">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </div>
+          <div class="productos-lista">
+            <div v-for="(prod, idx) in nueva.productos" :key="idx" class="producto-row">
+              <span>{{ prod.nombre }}</span>
+              <input type="number" v-model.number="prod.cantidad" min="1" />
+              <span>${{ prod.precio }}</span>
+              <button type="button" @click="eliminarProducto(idx)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="modal-totales">
+            <span>Subtotal: <b>${{ subtotal }}</b></span>
+            <span>Impuesto: <b>${{ impuesto }}</b></span>
+            <span>Total: <b>${{ totalConImpuesto }}</b></span>
+          </div>
           <div class="modal-actions">
-            <button type="submit" class="btn-primary">Guardar</button>
-            <button type="button" @click="modalNuevaVenta = false" class="btn-ver">Cancelar</button>
+            <button type="submit" class="btn-primary">Registrar Venta</button>
+            <button type="button" class="btn-anular" @click="modalNuevaVenta = false">Cancelar</button>
           </div>
         </form>
       </div>
@@ -164,8 +124,7 @@
               <div class="boleta-id">N° {{ detalleVenta.id }}</div>
             </div>
             <div class="boleta-logo">
-              <!-- Puedes poner aquí tu logo si tienes -->
-              <!-- <img src="/logo.png" alt="Logo" /> -->
+              <!-- Logo aquí si lo tienes -->
             </div>
           </div>
           <div class="boleta-info">
@@ -197,22 +156,35 @@
               <b>Motivo:</b> {{ detalleVenta.motivo_anulacion }}
             </div>
           </div>
-          <div class="boleta-footer">
+          <div class="boleta-footer" v-if="!detalleVenta.anulada">
             ¡Gracias por su compra!
           </div>
         </div>
-        <!-- Botones fuera del div boleta-contenido -->
-        <button class="btn-imprimir no-print" @click="imprimirBoleta">
-          🖨️ Imprimir Boleta
+        <button
+          class="btn-imprimir no-print"
+          @click="imprimirBoleta"
+          v-if="!detalleVenta.anulada"
+        >
+          <i class="fas fa-print"></i> Imprimir Boleta
         </button>
-        <button class="btn-imprimir no-print" @click="descargarBoletaPDF">
-          🖨️ Descargar Boleta PDF
+        <button
+          class="btn-imprimir no-print"
+          @click="descargarBoletaPDF"
+          v-if="!detalleVenta.anulada"
+        >
+          <i class="fas fa-file-pdf"></i> Descargar Boleta PDF
         </button>
-        <small class="no-print" style="color:#43cea2;display:block;margin-top:4px;">
+        <small
+          class="no-print"
+          style="color:#43cea2;display:block;margin-top:4px;"
+          v-if="!detalleVenta.anulada"
+        >
           Sugerencia: Guarde el archivo como <b>boleta-venta-{{detalleVenta.id}}.pdf</b>
         </small>
         <div class="modal-actions no-print">
-          <button @click="modalDetalle = false" class="btn-ver">Cerrar</button>
+          <button @click="modalDetalle = false" class="btn-ver">
+            <i class="fas fa-times"></i> Cerrar
+          </button>
         </div>
       </div>
     </div>
@@ -224,11 +196,17 @@
         <label>Motivo de anulación:</label>
         <textarea v-model="motivoAnulacion" required style="width:100%;min-height:60px;"></textarea>
         <div class="modal-actions">
-          <button class="btn-primary" @click="anularVenta">Confirmar</button>
-          <button class="btn-ver" @click="cerrarModalAnulacion">Cancelar</button>
+          <button class="btn-primary" @click="anularVenta">
+            <i class="fas fa-check"></i> Confirmar
+          </button>
+          <button class="btn-ver" @click="cerrarModalAnulacion">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
         </div>
       </div>
     </div>
+
+    <p v-if="!resumenVentas" class="loading-text">Cargando ventas...</p>
   </div>
 </template>
 
@@ -267,6 +245,7 @@ export default {
       otrosMetodoPago: '',
       ventaAAnular: null,
       motivoAnulacion: '',
+      resumenVentas: null, // o [] o {} según lo que necesites
     };
   },
   async mounted() {
@@ -317,9 +296,11 @@ export default {
     async fetchVentas() {
       try {
         const res = await salesService.getAll();
-        this.ventas = res.data;
+        this.ventas = res.data || [];
       } catch (e) {
         alert('Error al cargar ventas');
+      } finally {
+        this.resumenVentas = true; // <-- Esto oculta el mensaje
       }
     },
     // Obtiene todos los productos desde el servicio
@@ -368,6 +349,8 @@ export default {
               price: productoOriginal.price,
               purchase_price: productoOriginal.purchase_price,
               category: productoOriginal.category,
+              marca: productoOriginal.marca, // <-- agrega esto
+              unidad_medida: productoOriginal.unidad_medida, // <-- y esto
               stock: nuevoStock,
               stock_min: productoOriginal.stock_min,
               stock_max: productoOriginal.stock_max,
@@ -407,12 +390,22 @@ export default {
     // Agrega un producto a la venta actual
     agregarProducto() {
       if (this.productoSeleccionado && this.productoTemp.cantidad > 0) {
-        this.nueva.productos.push({
-          id: this.productoSeleccionado.id,
-          name: this.productoSeleccionado.name,
-          cantidad: this.productoTemp.cantidad,
-          precio: this.productoSeleccionado.price,
-        });
+        // Busca si el producto ya está en la lista
+        const idx = this.nueva.productos.findIndex(
+          p => p.id === this.productoSeleccionado.id
+        );
+        if (idx !== -1) {
+          // Si ya existe, suma la cantidad
+          this.nueva.productos[idx].cantidad += Number(this.productoTemp.cantidad);
+        } else {
+          // Si no existe, lo agrega
+          this.nueva.productos.push({
+            id: this.productoSeleccionado.id,
+            name: this.productoSeleccionado.name,
+            cantidad: Number(this.productoTemp.cantidad),
+            precio: this.productoSeleccionado.price,
+          });
+        }
         this.productoBuscado = "";
         this.productoSeleccionado = null;
         this.productoTemp = { cantidad: 1 };

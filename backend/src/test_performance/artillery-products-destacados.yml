@@ -1,0 +1,9 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 1
+      arrivalRate: 300
+scenarios:
+  - flow:
+      - get:
+          url: "/api/products/destacados"

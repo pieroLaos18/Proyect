@@ -19,10 +19,10 @@ router.get('/ultimas', async (req, res) => {
 // Obtener todas las actividades
 router.get('/todas', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, descripcion, fecha FROM activities ORDER BY fecha DESC');
+    const [rows] = await pool.query('SELECT * FROM activities ORDER BY fecha DESC');
     res.json(rows);
-  } catch (error) {
-    res.status(500).json({ message: 'Error al obtener actividades' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener actividades' });
   }
 });
 

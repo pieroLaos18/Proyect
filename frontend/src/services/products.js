@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // URL base de la API de productos
-const API_URL = 'http://localhost:5000/api/products'; // Ajusta la URL según tu backend
+const API_URL = `${import.meta.env.VITE_API_URL}/api/products`; // Usar variable de entorno
 
 export default {
   // Obtiene todos los productos
@@ -11,7 +11,10 @@ export default {
   },
   // Actualiza un producto por su ID
   update(id, data) {
-    return axios.put(`${API_URL}/${id}`, data);
+    const token = localStorage.getItem('authToken');
+    return axios.put(`${API_URL}/${id}`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
   },
   // Puedes agregar más métodos si los necesitas (getById, create, etc.)
 };

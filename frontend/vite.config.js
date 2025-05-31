@@ -5,12 +5,13 @@ import path from 'path';
 export default defineConfig({
   plugins: [vue()],
   server: {
+    port: 5174, // <--- Agrega esta línea
     fs: {
-      allow: ['..'], // Permite acceder al directorio padre (donde está node_modules)
+      allow: ['..'],
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5000', // <-- Cambia esto
         changeOrigin: true,
       },
     },

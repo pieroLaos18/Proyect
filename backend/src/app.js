@@ -2,7 +2,7 @@
 
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
+require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
 
@@ -11,11 +11,9 @@ const authRoutes = require('./routes/auth');         // Rutas de autenticación
 const productRoutes = require('./routes/products');  // Rutas de productos
 const salesRoutes = require('./routes/sales');       // Rutas de ventas
 const reportsRoutes = require('./routes/reports');   // Rutas de reportes
-const usersRouter = require('./routes/users');       // Rutas de usuarios
+const usersRoutes = require('./routes/users');
 const activityRoutes = require('./routes/activity'); // Rutas de actividades
 const pool = require('./db');                        // Conexión a la base de datos
-
-dotenv.config();
 
 const app = express();
 
@@ -27,7 +25,10 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Middleware global
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL, // Usa la variable de entorno
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' })); // Procesa datos JSON
 app.use(express.urlencoded({ limit: '10mb', extended: true })); // Procesa datos codificados en URL
 
@@ -39,7 +40,7 @@ app.use('/api/auth', authRoutes);           // Rutas de autenticación
 app.use('/api/products', productRoutes);    // Rutas de productos
 app.use('/api/sales', salesRoutes);         // Rutas de ventas
 app.use('/api/reports', reportsRoutes);     // Rutas de reportes
-app.use('/api/users', usersRouter);         // Rutas de usuarios
+app.use('/api/users', usersRoutes);         // Rutas de usuarios
 app.use('/api/actividades', activityRoutes); // Rutas de actividades
 
 // Verificar conexión a la base de datos

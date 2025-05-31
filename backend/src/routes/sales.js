@@ -3,25 +3,34 @@
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
+const authenticate = require('../middleware/authenticate');
 
 // Obtener todas las ventas y sus productos asociados
 router.get('/', async (req, res) => {
   try {
-    // Obtén todas las ventas
-    const [ventas] = await pool.query('SELECT * FROM ventas');
+    const [ventas] = await pool.query(
+      'SELECT * FROM ventas ORDER BY fecha DESC'
+    );
 
-    // Para cada venta, obtén sus productos
-    for (const venta of ventas) {
-      const [productos] = await pool.query(`
-        SELECT dv.producto_id as id, p.name, dv.cantidad, dv.precio_unitario as precio
-        FROM detalle_ventas dv
-        JOIN products p ON dv.producto_id = p.id
-        WHERE dv.venta_id = ?
-      `, [venta.id]);
-      venta.productos = productos;
+    if (ventas.length === 0) return res.json([]); // <-- Solo un array vacío
+
+    const ventaIds = ventas.map(v => v.id);
+    let productos = [];
+    if (ventaIds.length > 0) {
+      [productos] = await pool.query(
+        `SELECT dv.venta_id, dv.producto_id as id, p.name, dv.cantidad, dv.precio_unitario as precio
+         FROM detalle_ventas dv
+         JOIN products p ON dv.producto_id = p.id
+         WHERE dv.venta_id IN (${ventaIds.map(() => '?').join(',')})`,
+        ventaIds
+      );
     }
 
-    res.json(ventas);
+    for (const venta of ventas) {
+      venta.productos = productos.filter(p => p.venta_id === venta.id);
+    }
+
+    res.json(ventas); // <-- Siempre un array
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener ventas' });
   }
@@ -51,42 +60,73 @@ router.get('/resumen', async (req, res) => {
 // Ventas por día de la semana (últimos 7 días)
 router.get('/ventas-por-dia', async (req, res) => {
   try {
+    // Días cortos en español, en orden de lunes a domingo
+    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    // Agrupa por número de día de la semana
     const [rows] = await pool.query(`
       SELECT 
-        DAYNAME(fecha) as dia,
-        DATE(fecha) as fecha,
+        DAYOFWEEK(fecha) as dia_num,
         SUM(total) as total
       FROM ventas
       WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-      GROUP BY fecha
-      ORDER BY fecha
+        AND anulada = 0
+      GROUP BY dia_num
     `);
 
-    // Mapear a días de la semana en español
-    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    const ventasPorDia = diasSemana.map(dia => {
-      const row = rows.find(r => {
-        // Ajustar nombres según tu base de datos (puede ser en inglés)
-        const map = {
-          Monday: 'Lunes',
-          Tuesday: 'Martes',
-          Wednesday: 'Miércoles',
-          Thursday: 'Jueves',
-          Friday: 'Viernes',
-          Saturday: 'Sábado',
-          Sunday: 'Domingo'
-        };
-        return map[r.dia] === dia;
-      });
+    // Mapea los resultados a los días de la semana (lunes a domingo)
+    const ventasPorDia = diasSemana.map((dia, idx) => {
+      // idx: 0 (Lun) -> dia_num 2, ..., idx: 6 (Dom) -> dia_num 1
+      const diaNum = idx === 6 ? 1 : idx + 2;
+      const found = rows.find(r => Number(r.dia_num) === diaNum);
       return {
         dia,
-        total: row ? Number(row.total) : 0
+        total: found ? Number(found.total) : 0
       };
     });
 
     res.json(ventasPorDia);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener ventas por día' });
+    res.status(500).json({ message: 'Error al obtener ventas por día', error: error.message });
+  }
+});
+
+// Ventas por día de la semana (semana anterior)
+router.get('/ventas-por-dia-anterior', async (req, res) => {
+  try {
+    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const [rows] = await pool.query(`
+      SELECT 
+        DAYOFWEEK(fecha) as dia_num,
+        SUM(total) as total
+      FROM ventas
+      WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)
+        AND fecha < DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        AND anulada = 0
+      GROUP BY dia_num
+    `);
+    const ventasPorDia = diasSemana.map((dia, idx) => {
+      const diaNum = idx === 6 ? 1 : idx + 2;
+      const found = rows.find(r => Number(r.dia_num) === diaNum);
+      return { dia, total: found ? Number(found.total) : 0 };
+    });
+    res.json(ventasPorDia);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener ventas semana anterior' });
+  }
+});
+// Métodos de pago utilizados en ventas
+router.get('/metodos-pago', async (req, res) => {
+  try {
+    console.log('>>> ENDPOINT METODOS-PAGO EJECUTADO <<<');
+    const [rows] = await pool.query(`
+      SELECT metodo_pago, SUM(total) as total
+      FROM ventas
+      WHERE anulada = 0
+      GROUP BY metodo_pago
+    `);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener métodos de pago' });
   }
 });
 
@@ -112,12 +152,41 @@ router.get('/:id', async (req, res) => {
 });
 
 // Registrar una nueva venta y actualizar stock
-router.post('/', async (req, res) => {
-  const { cliente, productos, subtotal, impuesto, total, user_id, metodo_pago } = req.body;
+router.post('/', authenticate, async (req, res) => {
+  const { cliente, productos, user_id, metodo_pago } = req.body;
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
+    // 1. Obtener los productos reales de la base de datos
+    const ids = productos.map(p => p.id);
+    const [productosDB] = await conn.query(
+      `SELECT id, price FROM products WHERE id IN (${ids.map(() => '?').join(',')})`,
+      ids
+    );
+
+    // 2. Calcular subtotal, impuesto y total en el backend
+    let subtotal = 0;
+    for (const prod of productos) {
+      const prodDB = productosDB.find(pdb => pdb.id === prod.id);
+      if (!prodDB) throw new Error(`Producto ID ${prod.id} no encontrado`);
+      subtotal += prod.cantidad * prodDB.price;
+    }
+    const impuestoPorcentaje = 18; // o el valor que uses
+    const impuesto = +(subtotal * impuestoPorcentaje / 100).toFixed(2);
+    const total = +(subtotal + impuesto).toFixed(2);
+
+    // (Opcional) Validar que los valores enviados coincidan
+    if (
+      +req.body.subtotal !== subtotal ||
+      +req.body.impuesto !== impuesto ||
+      +req.body.total !== total
+    ) {
+      await conn.rollback();
+      return res.status(400).json({ message: 'Los totales enviados no coinciden con los calculados.' });
+    }
+
+    // 3. Registrar la venta usando los valores calculados
     const [result] = await conn.query(
       `INSERT INTO ventas (cliente, fecha, subtotal, impuesto, total, user_id, metodo_pago) 
        VALUES (?, CURDATE(), ?, ?, ?, ?, ?)`,
@@ -126,34 +195,42 @@ router.post('/', async (req, res) => {
     const ventaId = result.insertId;
 
     for (const prod of productos) {
+      console.log('Insertando en detalle_ventas:', prod);
+      // Verifica stock antes de descontar
+      const [[stockCheck]] = await conn.query(
+        'SELECT stock FROM products WHERE id = ?',
+        [prod.id]
+      );
+      if (!stockCheck || stockCheck.stock < prod.cantidad) {
+        await conn.rollback();
+        return res.status(400).json({ message: `Stock insuficiente para el producto ID ${prod.id}` });
+      }
       await conn.query(
         'INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
-        [ventaId, prod.id, prod.cantidad, prod.precio]
+        [ventaId, prod.id, prod.cantidad, prod.precio || prodDB.price]
       );
-      // Actualiza el stock del producto
       await conn.query(
-        'UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?',
-        [prod.cantidad, prod.id, prod.cantidad]
+        'UPDATE products SET stock = stock - ? WHERE id = ?',
+        [prod.cantidad, prod.id]
       );
     }
 
     // Obtener el nombre del usuario
-    const [[usuario]] = await conn.query('SELECT nombre FROM users WHERE id = ?', [user_id]);
-    const nombreUsuario = usuario ? usuario.nombre : 'Desconocido';
+    const usuario = req.user ? (req.user.nombre || req.user.correo_electronico) : 'Desconocido';
 
     await pool.query(
       'INSERT INTO activities (descripcion, usuario) VALUES (?, ?)',
       [
         `Venta registrada para el cliente ${cliente} por S/ ${total}`,
-        nombreUsuario
+        usuario
       ]
     );
 
     await conn.commit();
-    res.json({ message: 'Venta registrada', ventaId });
+    res.status(200).json({ ventaId });
   } catch (error) {
+    console.error(error); // <-- Esto te dará la pista
     await conn.rollback();
-    console.error('Error real al registrar venta:', error);
     res.status(500).json({ message: 'Error al registrar venta' });
   } finally {
     conn.release();
@@ -161,12 +238,23 @@ router.post('/', async (req, res) => {
 });
 
 // Anular una venta, recuperar stock y registrar actividad
-router.put('/anular/:id', async (req, res) => {
-  const { motivo, user_id } = req.body; // <-- Asegúrate de recibir el user_id
+router.put('/anular/:id', authenticate, async (req, res) => {
+  const { motivo, user_id } = req.body;
   const ventaId = req.params.id;
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+
+    // Verifica si la venta existe y si ya está anulada
+    const [ventaCheck] = await conn.query('SELECT anulada FROM ventas WHERE id = ?', [ventaId]);
+    if (ventaCheck.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    if (ventaCheck[0].anulada) {
+      await conn.rollback();
+      return res.status(409).json({ message: 'La venta ya está anulada' });
+    }
 
     // 1. Marcar la venta como anulada
     const [result] = await conn.query(
@@ -216,6 +304,37 @@ router.put('/anular/:id', async (req, res) => {
     res.status(500).json({ message: 'Error al anular venta', error: error.message });
   } finally {
     conn.release();
+  }
+});
+
+// Generar comprobante simulado (boleta/factura) para una venta
+router.get('/comprobante/:id', async (req, res) => {
+  const ventaId = req.params.id;
+  try {
+    // Obtén los datos de la venta y su detalle
+    const [ventaRows] = await pool.query('SELECT * FROM ventas WHERE id = ?', [ventaId]);
+    const [detalleRows] = await pool.query('SELECT * FROM detalle_ventas WHERE venta_id = ?', [ventaId]);
+    if (ventaRows.length === 0) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    const venta = ventaRows[0];
+
+    // Simula el comprobante (puedes mejorar el formato)
+    const comprobante = {
+      tipo: venta.tipo_comprobante || 'boleta',
+      numero: venta.numero_comprobante || `B${venta.id.toString().padStart(6, '0')}`,
+      fecha: venta.fecha,
+      cliente: venta.cliente,
+      metodo_pago: venta.metodo_pago,
+      productos: detalleRows,
+      subtotal: venta.subtotal,
+      impuestos: venta.impuestos,
+      total: venta.total
+    };
+
+    res.json(comprobante);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al generar comprobante', error });
   }
 });
 

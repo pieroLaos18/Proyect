@@ -3,6 +3,7 @@
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
+const authenticate = require('../middleware/authenticate');
 
 // Reporte de ventas por rango de fechas
 router.get('/by-date', async (req, res) => {
@@ -22,13 +23,30 @@ router.get('/by-date', async (req, res) => {
       query += ' WHERE v.fecha BETWEEN ? AND ?';
       params = [from, to];
     }
+    // Si solo uno de los dos está definido, agrega un filtro individual
+    else if (from) {
+      query += ' WHERE v.fecha >= ?';
+      params = [from];
+    }
+    else if (to) {
+      query += ' WHERE v.fecha <= ?';
+      params = [to];
+    }
     query += ' ORDER BY v.fecha ASC';
     const [ventas] = await pool.query(query, params);
 
+    // Determina el usuario autenticado si existe
+    const usuario = req.user
+      ? (req.user.nombre || req.user.correo_electronico)
+      : (user || 'Desconocido');
+
     // Registrar actividad de generación de reporte
     await pool.query(
-      'INSERT INTO activities (descripcion) VALUES (?)',
-      [`Reporte de ventas generado${user ? ' por ' + user : ''} (${from || 'inicio'} a ${to || 'hoy'})`]
+      'INSERT INTO activities (descripcion, usuario) VALUES (?, ?)',
+      [
+        `Reporte de ventas generado${usuario ? ' por ' + usuario : ''} (${from || 'inicio'} a ${to || 'hoy'})`,
+        usuario
+      ]
     );
 
     res.json(ventas);

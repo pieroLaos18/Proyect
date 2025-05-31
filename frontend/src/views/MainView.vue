@@ -1,88 +1,4 @@
 <style src="@/assets/css/mainview.css"></style>
-<style>
-/* Estilos para el modal de notificaciones y botones de bajo stock */
-.notification-modal-bg {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.notification-modal {
-  background: #fff;
-  color: #232323;
-  border-radius: 10px;
-  padding: 2rem 2.5rem;
-  min-width: 320px;
-  max-width: 90vw;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
-}
-.notification-modal h3 {
-  margin-top: 0;
-}
-.notification-modal ul {
-  margin: 1rem 0;
-  padding-left: 1.2rem;
-}
-.notification-modal li {
-  margin-bottom: 0.5rem;
-}
-@media (prefers-color-scheme: dark) {
-  .notification-modal {
-    background: #232323;
-    color: #fff;
-  }
-}
-.low-stock-btn {
-  background: #ffcccc;
-  color: #232323;
-  border: 1px solid #ff3333;
-  border-radius: 6px;
-  padding: 0.5em 1em;
-  margin-bottom: 0.5em;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  transition: background 0.2s;
-}
-.low-stock-btn:hover {
-  background: #ffb3b3;
-}
-.low-stock-btn.improved {
-  display: flex;
-  align-items: center;
-  gap: 0.7em;
-  background: linear-gradient(90deg, #ffeaea 60%, #ffd6d6 100%);
-  color: #b10000;
-  border: 2px solid #ff3333;
-  border-radius: 8px;
-  padding: 0.7em 1.2em;
-  margin-bottom: 0.7em;
-  font-size: 1.08em;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(255,51,51,0.07);
-  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
-}
-.low-stock-btn.improved:hover {
-  background: linear-gradient(90deg, #ffd6d6 60%, #ffeaea 100%);
-  box-shadow: 0 4px 16px rgba(255,51,51,0.15);
-  transform: translateY(-2px) scale(1.03);
-}
-.low-stock-icon {
-  font-size: 1.3em;
-  margin-right: 0.2em;
-}
-.low-stock-details {
-  font-weight: 400;
-  color: #b10000;
-}
-.low-stock-btn .min {
-  color: #b10000;
-  font-size: 0.97em;
-}
-</style>
 <template>
   <div class="main-container">
     <!-- Overlay para cerrar el sidebar en pantallas pequeñas -->
@@ -95,15 +11,41 @@
     <!-- Sidebar de navegación principal -->
     <aside :class="{ 'sidebar-hidden': !isSidebarVisible, 'sidebar-visible': isSidebarVisible }" class="sidebar">
       <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <i class="fas fa-cash-register"></i>
+          Sales System
+        </div>
+      </div>
+      <div class="sidebar-user">
         <img :src="userImage || defaultImage" alt="Foto del usuario" class="user-image" />
+        <span class="sidebar-username">{{ userName }}</span>
+        <span class="sidebar-role">{{ currentUserRole }}</span>
       </div>
       <nav class="sidebar-menu">
+        
         <ul>
-          <li><router-link to="/main/dashboard"><i class="fas fa-home"></i> Escritorio</router-link></li>
-          <li><router-link to="/main/products"><i class="fas fa-box"></i> Productos</router-link></li>
-          <li><router-link to="/main/sales"><i class="fas fa-shopping-cart"></i> Ventas</router-link></li>
-          <li><router-link to="/main/reports"><i class="fas fa-chart-line"></i> Reportes</router-link></li>
-          <li><router-link to="/main/users"><i class="fas fa-users"></i> Usuarios</router-link></li>
+          <!-- Escritorio: solo admin y supervisor -->
+          <li v-if="['admin', 'supervisor'].includes(currentUserRole)">
+            <router-link to="/main/dashboard"><i class="fas fa-home"></i> Escritorio</router-link>
+          </li>
+          <!-- Productos: admin, supervisor, almacenero -->
+          <li v-if="['admin', 'supervisor', 'almacenero'].includes(currentUserRole)">
+            <router-link to="/main/products"><i class="fas fa-box"></i> Productos</router-link>
+          </li>
+          <!-- Ventas: admin, supervisor, cajero -->
+          <li v-if="['admin', 'supervisor', 'cajero'].includes(currentUserRole)">
+            <router-link to="/main/sales">
+              <i class="fas fa-cash-register"></i> Ventas
+            </router-link>
+          </li>
+          <!-- Reportes: admin, supervisor -->
+          <li v-if="['admin', 'supervisor'].includes(currentUserRole)">
+            <router-link to="/main/reports"><i class="fas fa-chart-line"></i> Reportes</router-link>
+          </li>
+          <!-- Usuarios: solo admin -->
+          <li v-if="currentUserRole === 'admin'">
+            <router-link to="/main/users"><i class="fas fa-users"></i> Usuarios</router-link>
+          </li>
         </ul>
       </nav>
     </aside>
@@ -116,28 +58,35 @@
           <button class="hamburger-btn" @click="toggleSidebar">
             <i class="fas fa-bars"></i>
           </button>
-          <!-- Nombre del usuario -->
-          <span class="user-name">{{ userName }}</span>
+          <!-- Título de la página -->
+          <span class="page-title">{{ pageTitle || 'Panel Principal' }}</span>
+        </div>
+        <div class="right-section">
           <!-- Botón de notificaciones de stock bajo -->
           <button class="notification-btn" @click="openNotifications">
             <i class="fas fa-bell"></i>
             <span v-if="notificationCount > 0" class="notification-badge">{{ notificationCount }}</span>
           </button>
-          <!-- Botón para cerrar sesión -->
-          <button @click="logout" class="logout-btn">Cerrar Sesión</button>
-        </div>
-        <div class="right-section">
           <!-- Botón para cambiar tema claro/oscuro -->
           <div class="theme-toggle">
             <i :class="theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun'" @click="toggleTheme"></i>
           </div>
+          <!-- Menú desplegable de usuario -->
+          <div class="user-dropdown">
+            <img :src="userImage || defaultImage" class="user-avatar" />
+            <span class="user-name">{{ userName }}</span>
+            <!-- Botón para cerrar sesión -->
+            <button @click="logout" class="logout-btn">
+              <i class="fas fa-sign-out-alt"></i>
+            </button>
+          </div>
         </div>
       </header>
-
-      <!-- Renderizado de las vistas hijas -->
-      <router-view></router-view>
+      <div class="dashboard-inner">
+        <!-- Renderizado de las vistas hijas -->
+        <router-view @set-title="setPageTitle"></router-view>
+      </div>
     </div>
-
     <!-- Modal de inactividad por seguridad -->
     <div v-if="showInactivityModal" class="inactivity-modal-bg">
       <div class="inactivity-modal">
@@ -172,12 +121,22 @@
         <button class="btn-primary" @click="showNotifications = false">Cerrar</button>
       </div>
     </div>
+
+    <!-- Toast de notificación de bajo stock -->
+    <div v-if="toastVisible" class="low-stock-toast">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ toastMessage }}
+    </div>
+
+    <div v-if="toast.show" class="custom-toast">
+      {{ toast.message }}
+    </div>
   </div>
 </template>
 
 <script>
-// Importa la imagen de usuario por defecto
 import defaultUserImage from '../assets/images/profile.png';
+import axios from 'axios';
 
 export default {
   data() {
@@ -208,7 +167,24 @@ export default {
       showNotifications: false,
       // Lista de productos con bajo stock
       lowStockProducts: [],
+      notificationInterval: null, // <--- Agrega esta línea
+      toastVisible: false,
+      toastMessage: '',
+      pageTitle: '',
+      lastActivity: Date.now(),
+      warningShown: false,
+      logoutTimer: null,
+      toast: {
+        show: false,
+        message: '',
+        timeout: null,
+      },
     };
+  },
+  computed: {
+    currentUserRole() {
+      return (localStorage.getItem('userRole') || '').toLowerCase();
+    }
   },
   created() {
     // Carga datos de usuario desde localStorage
@@ -224,25 +200,33 @@ export default {
 
     // Actualiza notificaciones de bajo stock al iniciar
     this.updateLowStockNotifications();
+
+    // Actualiza notificaciones cada 30 segundos
+    this.notificationInterval = setInterval(this.updateLowStockNotifications, 30000);
   },
   mounted() {
-    // Inicia el control de inactividad
     this.resetInactivityTimer();
     window.addEventListener('mousemove', this.resetInactivityTimer);
     window.addEventListener('keydown', this.resetInactivityTimer);
     window.addEventListener('click', this.resetInactivityTimer);
-  },
-  beforeDestroy() {
-    // Limpia el listener de resize
-    window.removeEventListener('resize', this.checkScreenSize);
+    this.activeCheckInterval = setInterval(() => {
+      this.updateUserActivity();
+    }, 60000);
+    // Agrega esta línea para verificar si el usuario sigue activo cada minuto
+    this.userActiveInterval = setInterval(() => {
+      this.checkUserActive();
+    }, 1000);
   },
   beforeUnmount() {
-    // Limpia listeners y timers de inactividad
     window.removeEventListener('mousemove', this.resetInactivityTimer);
     window.removeEventListener('keydown', this.resetInactivityTimer);
     window.removeEventListener('click', this.resetInactivityTimer);
     clearTimeout(this.inactivityTimer);
     clearTimeout(this.warningTimer);
+    clearInterval(this.notificationInterval);
+    clearInterval(this.activeCheckInterval);
+    // Limpia también el nuevo intervalo
+    clearInterval(this.userActiveInterval);
   },
   methods: {
     // Muestra/oculta el sidebar
@@ -254,10 +238,16 @@ export default {
       this.isSidebarVisible = false;
     },
     // Cierra sesión y limpia datos de usuario
-    logout() {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userImage');
+    async logout() {
+      try {
+        const token = localStorage.getItem('authToken');
+        await axios.post('/api/users/logout', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        // Ignora error si ocurre
+      }
+      localStorage.clear();
       this.$router.push('/login');
     },
     // Verifica si la pantalla es pequeña para responsive
@@ -282,16 +272,19 @@ export default {
     resetInactivityTimer() {
       clearTimeout(this.inactivityTimer);
       clearTimeout(this.warningTimer);
-      this.showInactivityModal = false;
-
-      // Muestra advertencia a los 5 minutos
+      this.startInactivityTimers();
+      if (this.showInactivityModal) {
+        this.showInactivityModal = false;
+      }
+    },
+    startInactivityTimers() {
       this.warningTimer = setTimeout(() => {
         this.showInactivityModal = true;
+        this.warningShown = true;
       }, this.warningLimit);
-
-      // Cierra sesión a los 10 minutos
       this.inactivityTimer = setTimeout(() => {
         this.logout();
+        this.showToast('Sesión cerrada por inactividad.');
       }, this.inactivityLimit);
     },
     // Confirma que el usuario sigue activo
@@ -302,7 +295,7 @@ export default {
     // Abre el modal de notificaciones y actualiza productos con bajo stock
     async openNotifications() {
       try {
-        const res = await fetch('http://localhost:5000/api/products');
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products`);
         const products = await res.json();
         this.lowStockProducts = products.filter(p => p.stock <= p.stock_min);
         this.notificationCount = this.lowStockProducts.length;
@@ -316,10 +309,18 @@ export default {
     // Actualiza la lista de productos con bajo stock (sin mostrar modal)
     async updateLowStockNotifications() {
       try {
-        const res = await fetch('http://localhost:5000/api/products');
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products`);
         const products = await res.json();
-        this.lowStockProducts = products.filter(p => p.stock <= p.stock_min);
-        this.notificationCount = this.lowStockProducts.length;
+        const lowStock = products.filter(p => p.stock <= p.stock_min);
+        // Mostrar toast solo si antes no había notificaciones y ahora sí
+        if (this.notificationCount === 0 && lowStock.length > 0) {
+          this.notificationCount = lowStock.length;
+          this.lowStockProducts = lowStock;
+          this.showLowStockToast();
+        } else {
+          this.notificationCount = lowStock.length;
+          this.lowStockProducts = lowStock;
+        }
       } catch (e) {
         this.lowStockProducts = [];
         this.notificationCount = 0;
@@ -332,6 +333,57 @@ export default {
         path: '/main/products', 
         query: { edit: productId }
       });
+    },
+    // Muestra un toast de notificación de bajo stock
+    showLowStockToast() {
+      this.toastMessage = `¡Atención! Hay ${this.notificationCount} producto(s) con bajo stock.`;
+      this.toastVisible = true;
+      setTimeout(() => {
+        this.toastVisible = false;
+      }, 4000);
+    },
+    // Establece el título de la página
+    setPageTitle(title) {
+      this.pageTitle = title;
+    },
+    async checkUserActive() {
+      try {
+        const userId = localStorage.getItem('userId');
+        const token = localStorage.getItem('authToken');
+        if (!userId || !token) return;
+        const res = await axios.get(`/api/users/${userId}/active`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data && res.data.active === false) {
+          localStorage.clear();
+          this.$router.push('/login');
+          this.showToast('Tu usuario ha sido desactivado.');
+        }
+        // Si está activo, no hagas nada
+      } catch (e) {
+        // Si hay error de red, NO cierres la sesión
+        // Opcional: puedes mostrar un mensaje pequeño o ignorar
+        // console.warn('No se pudo verificar el estado del usuario.');
+      }
+    },
+    async updateUserActivity() {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        await axios.post('/api/users/activity', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        // Ignora errores de red
+      }
+    },
+    showToast(message, duration = 3000) {
+      this.toast.message = message;
+      this.toast.show = true;
+      clearTimeout(this.toast.timeout);
+      this.toast.timeout = setTimeout(() => {
+        this.toast.show = false;
+      }, duration);
     },
   },
 };

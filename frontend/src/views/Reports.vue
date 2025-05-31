@@ -1,41 +1,70 @@
 <style src="@/assets/css/reports.css"></style>
 
 <template>
-  <div class="dynamic-content">
-    <h1>Reportes</h1>
-    <p>Visualización de reportes.</p>
-    <div class="filters">
-      <!-- Filtros de fecha -->
-      <label>Desde: <input type="date" v-model="fromDate" /></label>
-      <label>Hasta: <input type="date" v-model="toDate" /></label>
-      <!-- Botones de acciones -->
-      <button @click="fetchReport">Generar</button>
-      <button @click="exportCSV" :disabled="!reportData.length">Exportar CSV</button>
-      <button @click="exportExcel" :disabled="!reportData.length">Exportar Excel</button>
-      <button @click="exportPDF" :disabled="!reportData.length">Exportar PDF</button>
+  <div class="dynamic-content reports-modern">
+    <div class="reports-background-decor"></div>
+    <div class="reports-header-card glass">
+      <div class="reports-header-title">
+        <div class="reports-header-icon">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div>
+          <h1 class="reports-title">Reportes</h1>
+          <p class="reports-desc">Visualización y exportación de reportes de ventas.</p>
+        </div>
+      </div>
     </div>
-    <!-- Tabla de reportes -->
-    <table v-if="reportData.length">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Producto</th>
-          <th>Cantidad</th>
-          <th>Total</th>
-          <th>Usuario</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in reportData" :key="item.id">
-          <td>{{ item.date }}</td>
-          <td>{{ item.product }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ item.total }}</td>
-          <td>{{ item.usuario }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p v-else>No hay datos para mostrar.</p>
+    <div class="filters reports-filters-card">
+      <div class="filters-row">
+        <label>
+          <span>Desde:</span>
+          <input type="date" v-model="fromDate" />
+        </label>
+        <label>
+          <span>Hasta:</span>
+          <input type="date" v-model="toDate" />
+        </label>
+        <button class="btn-primary" @click="fetchReport">
+          <i class="fas fa-search"></i> Generar
+        </button>
+      </div>
+      <div class="filters-row export-row">
+        <button class="btn-secondary" @click="exportCSV" :disabled="!reportData.length">
+          <i class="fas fa-file-csv"></i> CSV
+        </button>
+        <button class="btn-success" @click="exportExcel" :disabled="!reportData.length">
+          <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button class="btn-warning" @click="exportPDF" :disabled="!reportData.length">
+          <i class="fas fa-file-pdf"></i> PDF
+        </button>
+      </div>
+    </div>
+    <div class="reports-table-section">
+      <table class="reports-table" v-if="reportData.length">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Total</th>
+            <th>Usuario</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in reportData" :key="item.id">
+            <td>{{ item.date }}</td>
+            <td>{{ item.product }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>
+              <span class="total-badge">S/ {{ item.total }}</span>
+            </td>
+            <td>{{ item.usuario }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="no-data-text">No hay datos para mostrar.</p>
+    </div>
   </div>
 </template>
 
@@ -59,21 +88,26 @@ export default {
     // Obtiene los datos del reporte desde la API
     async fetchReport() {
       try {
-        let url = '/api/reports/by-date';
+        let url = `${import.meta.env.VITE_API_URL}/api/reports/by-date`;
         const params = [];
         if (this.fromDate) params.push(`from=${this.fromDate}`);
         if (this.toDate) params.push(`to=${this.toDate}`);
         if (params.length) url += `?${params.join('&')}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
         if (!response.ok) throw new Error('Error al obtener los datos');
         const data = await response.json();
+        console.log('Respuesta del backend:', data);
         this.reportData = data.map(item => ({
           id: item.id,
-          date: item.fecha,         // Cambia 'fecha' a 'date'
+          date: item.fecha,
           product: item.product,
-          quantity: item.cantidad,  // Cambia 'cantidad' a 'quantity'
+          quantity: item.cantidad,
           total: item.total,
-          usuario: item.usuario     // Usuario que realizó la venta
+          usuario: item.usuario
         }));
       } catch (error) {
         alert('No se pudieron cargar los reportes.');

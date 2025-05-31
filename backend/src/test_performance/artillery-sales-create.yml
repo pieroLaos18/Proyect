@@ -1,0 +1,20 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 1
+      arrivalRate: 300
+scenarios:
+  - flow:
+      - post:
+          url: "/api/sales"
+          json:
+            productos:
+              - id: 1
+                cantidad: 1
+                precio: 10.00
+            cliente: "Juan"
+            metodo_pago: "Efectivo"
+            subtotal: 10.00
+            impuesto: 1.80
+            total: 11.80
+            user_id: 4
