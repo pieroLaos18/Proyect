@@ -13,6 +13,24 @@
   --border-radius: 12px;
   --transition: 0.2s cubic-bezier(.4,0,.2,1);
   --shadow: 0 2px 12px 0 rgba(31,59,77,0.08);
+
+  --background-color: #ffffff;
+  --text-color: #232323;
+  --input-background: #f8fafd;
+  --input-text-color: #232323;
+  --card-background: #fff;
+  --card-border: #e0e7ef;
+  --button-background: #43cea2;
+  --button-hover: #185a9d;
+  --primary: #43cea2;      /* Verde principal */
+  --secondary: #11998e;    /* Verde oscuro */
+  --accent: #b4ec51;       /* Verde claro/acento */
+  --divider: #e0e7ef;
+  --danger: #b10000;
+  --danger-bg: #ffebee;
+  --danger-border: #ff3333;
+  --btn-gradient: linear-gradient(90deg, #43cea2 60%, #185a9d 100%);
+  --btn-gradient-hover: linear-gradient(90deg, #185a9d 60%, #43cea2 100%);
 }
 
 /* Fondo general */
@@ -150,8 +168,6 @@ body, .dynamic-content {
   align-items: start;
   padding: 1.5rem 0.5rem;
   background: #f7fafd;
-  border-radius: 18px;
-  box-shadow: 0 2px 12px 0 rgba(31,59,77,0.06);
 }
 .product-card {
   background: #fff;
@@ -171,6 +187,10 @@ body, .dynamic-content {
 }
 .products-list .product-card:nth-child(-n+10) {
   animation: fadeInCard 0.4s;
+}
+@keyframes fadeInCard {
+  from { opacity: 0; transform: translateY(20px);}
+  to { opacity: 1; transform: none;}
 }
 .product-card.low-stock {
   border-color: var(--color-warning);
@@ -194,13 +214,18 @@ body, .dynamic-content {
   margin: 0.2rem 0 0.3rem 0;
   text-align: center;
   font-weight: 700;
+  color: var(--text-color); /* <-- usa variable */
+  margin-bottom: 0.3em;
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 .product-description {
   color: #6b7a8f;
   font-size: 0.97rem;
   margin-bottom: 0.5rem;
-  text-align: center;
-  min-height: 32px;
+  color: var(--text-color); /* Antes: #bfc9d1 */
+  font-size: 1.01em;
+  margin-bottom: 0.7em;
 }
 .product-meta {
   display: flex;
@@ -211,6 +236,8 @@ body, .dynamic-content {
 }
 .product-price {
   color: #27ae60;
+  color: var(--primary); /* Antes: #43cea2 */
+  font-size: 1.08em;
   font-weight: 600;
   font-size: 1.05rem;
 }
@@ -228,12 +255,22 @@ body, .dynamic-content {
 .stock-label {
   color: #1F3B4D;
   font-weight: 500;
+  color: var(--text-color);
+  font-weight: bold;
 }
 .stock-alert {
   color: #e67e22;
   font-size: 1.1em;
   margin-left: 0.3em;
   vertical-align: middle;
+  background: #fff;
+  color: #d32f2f;
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-left: 8px;
+  font-size: 0.97em;
+  display: inline-block;
 }
 
 /* Acciones de producto */
