@@ -23,10 +23,43 @@ const cajeroToken = jwt.sign({ id: 3, rol: 'cajero' }, 'secretKey');
 const almaceneroToken = jwt.sign({ id: 4, rol: 'almacenero' }, 'secretKey');
 
 describe('Users API', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    pool.query.mockImplementation((sql, params) => {
+      // Mock para el middleware authenticate
+      if (sql.includes('FROM users WHERE id = ?')) {
+        return Promise.resolve([[{
+          id: params[0],
+          nombre: 'Test',
+          correo_electronico: 'test@mail.com',
+          rol: params[0] === 1 ? 'admin' : params[0] === 2 ? 'supervisor' : params[0] === 3 ? 'cajero' : 'almacenero',
+          activo: 1
+        }]]);
+      }
+      // Por defecto, devuelve array vacío
+      return Promise.resolve([[]]);
+    });
+  });
 
   it('GET /api/users debe devolver usuarios activos', async () => {
-    pool.query.mockResolvedValueOnce([[{ id: 1, name: 'Juan', email: 'juan@mail.com', role: 'admin' }]]);
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'admin',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      })
+      .mockImplementationOnce(() => Promise.resolve([
+        [{ id: 1, name: 'Juan', email: 'juan@mail.com', role: 'admin' }]
+      ]));
+
     const res = await request(app)
       .get('/api/users')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -36,7 +69,22 @@ describe('Users API', () => {
   });
 
   it('GET /api/users/activos debe devolver cantidad de usuarios activos', async () => {
-    pool.query.mockResolvedValueOnce([[{ activos: 5 }]]);
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'admin',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      })
+      .mockImplementationOnce(() => Promise.resolve([[{ activos: 5 }]]));
+
     const res = await request(app)
       .get('/api/users/activos')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -45,7 +93,23 @@ describe('Users API', () => {
   });
 
   it('PUT /api/users/:id debe actualizar el rol de un usuario', async () => {
-    pool.query.mockResolvedValue([{}]); // Para ambas queries
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'admin',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      })
+      .mockImplementationOnce(() => Promise.resolve([{}])) // update
+      .mockImplementationOnce(() => Promise.resolve([{}])); // insert activity
+
     const res = await request(app)
       .put('/api/users/1')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -56,18 +120,49 @@ describe('Users API', () => {
   });
 
   it('DELETE /api/users/:id debe desactivar un usuario', async () => {
-    pool.query.mockResolvedValue([{}]); // Para ambas queries
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'admin',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      })
+      .mockImplementationOnce(() => Promise.resolve([{}])) // update
+      .mockImplementationOnce(() => Promise.resolve([{}])); // insert activity
+
     const res = await request(app)
       .delete('/api/users/1')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ usuario: 'admin' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('success', true);
-    expect(pool.query).toHaveBeenCalledWith('UPDATE users SET activo = 0 WHERE id = ?', ['1']);
+    expect(pool.query).toHaveBeenCalledWith('UPDATE users SET activo = 0, is_online = 0 WHERE id = ?', ['1']);
   });
 
   it('GET /api/users debe manejar errores', async () => {
-    pool.query.mockRejectedValueOnce(new Error('DB error'));
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'admin',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      })
+      .mockRejectedValueOnce(new Error('DB error'));
+
     const res = await request(app)
       .get('/api/users')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -150,7 +245,22 @@ describe('Users API', () => {
 
 describe('Permisos por rol en /api/users', () => {
   it('permite acceso a admin', async () => {
-    pool.query.mockResolvedValueOnce([[{ id: 1, name: 'Juan', email: 'juan@mail.com', role: 'admin' }]]);
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'admin',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      })
+      .mockImplementationOnce(() => Promise.resolve([[{ id: 1, name: 'Juan', email: 'juan@mail.com', role: 'admin' }]]));
+
     const res = await request(app)
       .get('/api/users')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -158,7 +268,22 @@ describe('Permisos por rol en /api/users', () => {
   });
 
   it('permite acceso a supervisor', async () => {
-    pool.query.mockResolvedValueOnce([[{ id: 2, name: 'Pedro', email: 'pedro@mail.com', role: 'supervisor' }]]);
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'supervisor',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      })
+      .mockImplementationOnce(() => Promise.resolve([[{ id: 2, name: 'Pedro', email: 'pedro@mail.com', role: 'supervisor' }]]));
+
     const res = await request(app)
       .get('/api/users')
       .set('Authorization', `Bearer ${supervisorToken}`);
@@ -166,6 +291,21 @@ describe('Permisos por rol en /api/users', () => {
   });
 
   it('deniega acceso a cajero', async () => {
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'cajero',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      });
+
     const res = await request(app)
       .get('/api/users')
       .set('Authorization', `Bearer ${cajeroToken}`);
@@ -174,6 +314,21 @@ describe('Permisos por rol en /api/users', () => {
   });
 
   it('deniega acceso a almacenero', async () => {
+    pool.query
+      .mockImplementationOnce((sql, params) => {
+        // Middleware: usuario válido
+        if (sql.includes('FROM users WHERE id = ?')) {
+          return Promise.resolve([[{
+            id: params[0],
+            nombre: 'Test',
+            correo_electronico: 'test@mail.com',
+            rol: 'almacenero',
+            activo: 1
+          }]]);
+        }
+        return Promise.resolve([[]]);
+      });
+
     const res = await request(app)
       .get('/api/users')
       .set('Authorization', `Bearer ${almaceneroToken}`);

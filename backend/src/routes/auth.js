@@ -21,18 +21,18 @@ router.post('/login', async (req, res) => {
       [correo_electronico]
     );
     if (user.length === 0) {
-      return res.status(401).json({ message: 'El usuario no existe.' });
+      return res.status(404).json({ message: 'Usuario no encontrado' }); // <-- status 404, mensaje sin punto
     }
 
     // 2. Verifica si está activo
     if (user[0].activo !== 1) {
-      return res.status(403).json({ message: 'El usuario está inactivo.' });
+      return res.status(403).json({ message: 'Usuario inactivo' }); // <-- mensaje sin punto
     }
 
     // 3. Verifica la contraseña
     const isPasswordValid = await bcrypt.compare(password, user[0].password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Contraseña incorrecta.' });
+      return res.status(401).json({ message: 'Contraseña incorrecta' }); // <-- mensaje sin punto
     }
 
     // 4. Actualiza el último login y registra la actividad

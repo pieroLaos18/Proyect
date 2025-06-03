@@ -91,9 +91,21 @@
               <i class="fas fa-plus"></i> Agregar
             </button>
           </div>
+          <div class="form-group">
+            <label for="metodo_pago">Método de pago:</label>
+            <select v-model="nueva.metodo_pago" id="metodo_pago" required>
+              <option value="" disabled>Selecciona un método</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+              <!-- Agrega más opciones si lo necesitas -->
+            </select>
+          </div>
           <div class="productos-lista">
             <div v-for="(prod, idx) in nueva.productos" :key="idx" class="producto-row">
-              <span>{{ prod.nombre }}</span>
+              <span>
+                {{ productosDisponibles.find(p => p.id === prod.id)?.name || 'Producto' }}
+              </span>
               <input type="number" v-model.number="prod.cantidad" min="1" />
               <span>${{ prod.precio }}</span>
               <button type="button" @click="eliminarProducto(idx)">
@@ -229,6 +241,7 @@ export default {
         cliente: "",
         productos: [],
         total: null,
+        metodo_pago: "", // <-- agrega esto
       },
       productoTemp: {
         cantidad: 1,
@@ -246,6 +259,15 @@ export default {
       ventaAAnular: null,
       motivoAnulacion: '',
       resumenVentas: null, // o [] o {} según lo que necesites
+      nuevaVenta: {
+        cliente: '',
+        productos: [],
+        subtotal: 0,
+        impuesto: 0,
+        total: 0,
+        metodo_pago: '', // <-- importante
+        // agrega otros campos si los necesitas
+      },
     };
   },
   async mounted() {
@@ -334,7 +356,7 @@ export default {
           impuesto: this.impuesto,
           total: this.totalConImpuesto,
           user_id: userId,
-          metodo_pago: this.metodoPago === 'otros' ? this.otrosMetodoPago : this.metodoPago
+          metodo_pago: this.nueva.metodo_pago // <-- aquí
         };
         await salesService.create(nuevaVenta);
 
@@ -362,7 +384,7 @@ export default {
         this.$root.$emit('actualizarLowStock');
         await this.fetchVentas();
         await this.fetchProductos();
-        this.nueva = { cliente: "", productos: [], total: null };
+        this.nueva = { cliente: "", productos: [], total: null, metodo_pago: "" };
         this.productoTemp = { cantidad: 1 };
         this.modalNuevaVenta = false;
       } catch (e) {
@@ -401,9 +423,8 @@ export default {
           // Si no existe, lo agrega
           this.nueva.productos.push({
             id: this.productoSeleccionado.id,
-            name: this.productoSeleccionado.name,
             cantidad: Number(this.productoTemp.cantidad),
-            precio: this.productoSeleccionado.price,
+            precio: this.productoSeleccionado.price
           });
         }
         this.productoBuscado = "";

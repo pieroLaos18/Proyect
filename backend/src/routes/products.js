@@ -73,17 +73,68 @@ router.get('/destacados', async (req, res) => {
 
 // Agregar un producto
 router.post('/', authenticate, upload.single('image'), async (req, res) => {
-  const { name, description, price, purchase_price, category, marca, unidad_medida, stock, stock_min, stock_max } = req.body;
+  console.log('BODY:', req.body);
+  console.log('FILE:', req.file);
+
+  const {
+    name,
+    description,
+    price,
+    purchase_price,
+    category,
+    marca,
+    unidad_medida,
+    stock,
+    stock_min,
+    stock_max
+  } = req.body;
+
   const image = req.file ? `/uploads/${req.file.filename}` : null;
 
-  if (!name || !description || !price || !purchase_price || !category || !marca || !unidad_medida || !stock || !image || stock_min === undefined || stock_max === undefined) {
+  // Convierte los campos numéricos correctamente
+  const priceNum = price ? Number(price) : null;
+  const purchasePriceNum = purchase_price ? Number(purchase_price) : null;
+  const stockNum = stock ? Number(stock) : null;
+  const stockMinNum = stock_min ? Number(stock_min) : null;
+  const stockMaxNum = stock_max ? Number(stock_max) : null;
+
+  function isEmpty(val) {
+    return val === undefined || val === null || val === '';
+  }
+
+  if (
+    isEmpty(name) ||
+    isEmpty(description) ||
+    isEmpty(price) ||
+    isEmpty(purchase_price) ||
+    isEmpty(category) ||
+    isEmpty(marca) ||
+    isEmpty(unidad_medida) ||
+    isEmpty(stock) ||
+    isEmpty(stock_min) ||
+    isEmpty(stock_max)
+  ) {
     return res.status(400).json({ message: 'Todos los campos son obligatorios' });
   }
 
   try {
-    const result = await pool.query(
-      'INSERT INTO products (name, description, price, purchase_price, category, marca, unidad_medida, stock, stock_min, stock_max, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, description, price, purchase_price, category, marca, unidad_medida, stock, stock_min, stock_max, image]
+    const [result] = await pool.query(
+      `INSERT INTO products 
+        (name, description, price, purchase_price, category, marca, unidad_medida, stock, stock_min, stock_max, image) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name,
+        description,
+        priceNum,
+        purchasePriceNum,
+        category,
+        marca,
+        unidad_medida,
+        stockNum,
+        stockMinNum,
+        stockMaxNum,
+        image
+      ]
     );
     const usuario = req.user ? (req.user.nombre || req.user.correo_electronico) : 'Desconocido';
     await pool.query(

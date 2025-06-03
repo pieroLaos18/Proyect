@@ -170,14 +170,13 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Categoría:</label>
-            <div class="input-container">
-              <i class="fas fa-list"></i>
-              <select v-model="form.category" required>
-                <option disabled value="">Selecciona una categoría</option>
-                <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-              </select>
-            </div>
+           <label for="category">Categoría:</label>
+<input
+  v-model="form.category"
+  id="category"
+  type="text"
+  placeholder="Ingresa la categoría"
+/>
           </div>
           <div class="form-group">
             <label>Marca:</label>
@@ -412,14 +411,14 @@ export default {
         const formData = new FormData();
         formData.append('name', this.newProduct.name);
         formData.append('description', this.newProduct.description);
-        formData.append('price', parseFloat(this.newProduct.price));
-        formData.append('purchase_price', parseFloat(this.newProduct.purchasePrice));
+        formData.append('price', this.newProduct.price ? Number(this.newProduct.price) : 0);
+        formData.append('purchase_price', this.newProduct.purchasePrice ? Number(this.newProduct.purchasePrice) : 0);
         formData.append('category', this.newProduct.category);
         formData.append('marca', this.newProduct.marca); // nuevo
         formData.append('unidad_medida', this.newProduct.unidad_medida); // nuevo
-        formData.append('stock', parseInt(this.newProduct.stock, 10));
-        formData.append('stock_min', this.newProduct.stockMin || 0);
-        formData.append('stock_max', this.newProduct.stockMax || 0);
+        formData.append('stock', this.newProduct.stock ? Number(this.newProduct.stock) : 0);
+        formData.append('stock_min', this.newProduct.stockMin ? Number(this.newProduct.stockMin) : 0);
+        formData.append('stock_max', this.newProduct.stockMax ? Number(this.newProduct.stockMax) : 0);
 
         // Si hay una imagen seleccionada, agregarla al FormData
         if (this.newProduct.imageFile) {
@@ -451,14 +450,14 @@ export default {
         const formData = new FormData();
         formData.append('name', this.newProduct.name);
         formData.append('description', this.newProduct.description);
-        formData.append('price', parseFloat(this.newProduct.price));
-        formData.append('purchase_price', parseFloat(this.newProduct.purchasePrice));
+        formData.append('price', this.newProduct.price ? Number(this.newProduct.price) : 0);
+        formData.append('purchase_price', this.newProduct.purchasePrice ? Number(this.newProduct.purchasePrice) : 0);
         formData.append('category', this.newProduct.category);
         formData.append('marca', this.newProduct.marca); // nuevo
         formData.append('unidad_medida', this.newProduct.unidad_medida); // nuevo
-        formData.append('stock', parseInt(this.newProduct.stock, 10));
-        formData.append('stock_min', this.newProduct.stockMin || 0);
-        formData.append('stock_max', this.newProduct.stockMax || 0);
+        formData.append('stock', this.newProduct.stock ? Number(this.newProduct.stock) : 0);
+        formData.append('stock_min', this.newProduct.stockMin ? Number(this.newProduct.stockMin) : 0);
+        formData.append('stock_max', this.newProduct.stockMax ? Number(this.newProduct.stockMax) : 0);
         if (this.newProduct.imageFile) {
           formData.append('image', this.newProduct.imageFile);
         }
@@ -557,14 +556,46 @@ export default {
     async saveProduct() {
       try {
         const token = localStorage.getItem('authToken');
+        const formData = new FormData();
+        formData.append('name', this.form.name);
+        formData.append('description', this.form.description);
+        formData.append('price', this.form.price ? Number(this.form.price) : 0);
+        formData.append('purchase_price', this.form.purchasePrice ? Number(this.form.purchasePrice) : 0);
+        formData.append('category', this.form.category);
+        formData.append('marca', this.form.marca);
+        formData.append('unidad_medida', this.form.unidad_medida);
+        formData.append('stock', this.form.stock ? Number(this.form.stock) : 0);
+        formData.append('stock_min', this.form.stockMin ? Number(this.form.stockMin) : 0);
+        formData.append('stock_max', this.form.stockMax ? Number(this.form.stockMax) : 0);
+        formData.append('activo', this.form.activo ?? 1);
+
+        // Adjunta la imagen si fue seleccionada
+        if (this.form.imageFile) {
+          formData.append('image', this.form.imageFile);
+        }
+
         if (this.editingProduct && this.editingProduct.id) {
-          await axios.put(`/api/products/${this.editingProduct.id}`, this.form, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          await axios.put(
+            `${import.meta.env.VITE_API_URL}/api/products/${this.editingProduct.id}`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                Authorization: `Bearer ${token}`
+              }
+            }
+          );
         } else {
-          await axios.post('/api/products', this.form, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          await axios.post(
+            `${import.meta.env.VITE_API_URL}/api/products`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                Authorization: `Bearer ${token}`
+              }
+            }
+          );
         }
         this.showProductModal = false;
         this.fetchProducts();
@@ -586,7 +617,13 @@ export default {
       await axios.put(`/api/products/${this.editingProduct.id}`, this.form, {
         headers: { Authorization: `Bearer ${token}` }
       });
-    }
+    },
+    onImageChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.form.imageFile = file;
+      }
+    },
   },
   mounted() {
     // Al montar, obtiene productos y verifica si hay que editar alguno por query

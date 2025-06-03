@@ -22,7 +22,7 @@ router.get('/todas', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM activities ORDER BY fecha DESC');
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener actividades' });
+    res.status(500).json({ message: 'Error al obtener actividades' }); // <-- corregido
   }
 });
 

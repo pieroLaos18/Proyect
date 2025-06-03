@@ -61,7 +61,7 @@ router.get('/resumen', async (req, res) => {
 router.get('/ventas-por-dia', async (req, res) => {
   try {
     // Días cortos en español, en orden de lunes a domingo
-    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     // Agrupa por número de día de la semana
     const [rows] = await pool.query(`
       SELECT 
@@ -93,7 +93,7 @@ router.get('/ventas-por-dia', async (req, res) => {
 // Ventas por día de la semana (semana anterior)
 router.get('/ventas-por-dia-anterior', async (req, res) => {
   try {
-    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const [rows] = await pool.query(`
       SELECT 
         DAYOFWEEK(fecha) as dia_num,
@@ -153,7 +153,19 @@ router.get('/:id', async (req, res) => {
 
 // Registrar una nueva venta y actualizar stock
 router.post('/', authenticate, async (req, res) => {
-  const { cliente, productos, user_id, metodo_pago } = req.body;
+  let productos = req.body.productos;
+  if (typeof productos === 'string') {
+    try {
+      productos = JSON.parse(productos);
+    } catch (e) {
+      return res.status(400).json({ message: 'Formato de productos inválido.' });
+    }
+  }
+  if (!Array.isArray(productos)) {
+    return res.status(400).json({ message: 'El campo productos debe ser un array.' });
+  }
+  const { cliente = '', user_id, metodo_pago } = req.body;
+  const clienteInsert = cliente || '';
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -169,7 +181,10 @@ router.post('/', authenticate, async (req, res) => {
     let subtotal = 0;
     for (const prod of productos) {
       const prodDB = productosDB.find(pdb => pdb.id === prod.id);
-      if (!prodDB) throw new Error(`Producto ID ${prod.id} no encontrado`);
+      if (!prodDB) {
+        await conn.rollback();
+        return res.status(400).json({ message: `Producto con id ${prod.id} no encontrado.` });
+      }
       subtotal += prod.cantidad * prodDB.price;
     }
     const impuestoPorcentaje = 18; // o el valor que uses
@@ -187,12 +202,12 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     // 3. Registrar la venta usando los valores calculados
-    const [result] = await conn.query(
+    const [insertResult] = await conn.query(
       `INSERT INTO ventas (cliente, fecha, subtotal, impuesto, total, user_id, metodo_pago) 
        VALUES (?, CURDATE(), ?, ?, ?, ?, ?)`,
-      [cliente, subtotal, impuesto, total, user_id, metodo_pago]
+      [clienteInsert, subtotal, impuesto, total, user_id, metodo_pago]
     );
-    const ventaId = result.insertId;
+    const ventaId = insertResult.insertId;
 
     for (const prod of productos) {
       console.log('Insertando en detalle_ventas:', prod);
@@ -205,9 +220,11 @@ router.post('/', authenticate, async (req, res) => {
         await conn.rollback();
         return res.status(400).json({ message: `Stock insuficiente para el producto ID ${prod.id}` });
       }
+      // Busca el producto en productosDB para obtener el precio correcto
+      const prodDB = productosDB.find(pdb => pdb.id === prod.id);
       await conn.query(
         'INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)',
-        [ventaId, prod.id, prod.cantidad, prod.precio || prodDB.price]
+        [ventaId, prod.id, prod.cantidad, prod.precio || (prodDB ? prodDB.price : 0)]
       );
       await conn.query(
         'UPDATE products SET stock = stock - ? WHERE id = ?',
@@ -216,20 +233,20 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     // Obtener el nombre del usuario
-    const usuario = req.user ? (req.user.nombre || req.user.correo_electronico) : 'Desconocido';
 
-    await pool.query(
-      'INSERT INTO activities (descripcion, usuario) VALUES (?, ?)',
-      [
-        `Venta registrada para el cliente ${cliente} por S/ ${total}`,
-        usuario
-      ]
-    );
+const usuario = req.user ? (req.user.nombre || req.user.correo_electronico) : 'Desconocido';
 
+await pool.query(
+  'INSERT INTO activities (descripcion, usuario) VALUES (?, ?)',
+  [
+    `Venta registrada para el cliente ${clienteInsert} por S/ ${total}`,
+    usuario
+  ]
+);
     await conn.commit();
     res.status(200).json({ ventaId });
   } catch (error) {
-    console.error(error); // <-- Esto te dará la pista
+    console.error('ERROR EN POST /api/sales:', error); // <-- esto es clave
     await conn.rollback();
     res.status(500).json({ message: 'Error al registrar venta' });
   } finally {
