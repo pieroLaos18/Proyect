@@ -5,13 +5,13 @@ import path from 'path';
 export default defineConfig({
   plugins: [vue()],
   server: {
-    port: 5174, // <--- Agrega esta línea
+    port: 5174,
     fs: {
       allow: ['..'],
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // <-- Cambia esto
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
     },
@@ -21,4 +21,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true
+  }
 });
