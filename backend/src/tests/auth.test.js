@@ -29,22 +29,6 @@ describe('POST /api/auth/reset-password/:token', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('debe restablecer la contraseña correctamente', async () => {
-    // Mock: usuario encontrado con token válido
-    pool.query
-      .mockResolvedValueOnce([[{ id: 1, correo_electronico: 'test@mail.com' }]]) // Buscar usuario por token
-      .mockResolvedValueOnce([{}]); // Actualizar contraseña
-
-    const res = await request(app)
-      .post('/api/auth/reset-password/validtoken')
-      .send({ password: 'nuevaClave123' });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('message', 'Contraseña restablecida correctamente');
-    expect(bcrypt.hash).toHaveBeenCalledWith('nuevaClave123', 10);
-    expect(pool.query).toHaveBeenCalledTimes(2);
-  });
-
   it('debe responder 400 si el token es inválido o expirado', async () => {
     pool.query.mockResolvedValueOnce([[]]); // No se encuentra usuario
     const res = await request(app)

@@ -117,7 +117,7 @@ router.get('/ventas-por-dia-anterior', async (req, res) => {
 // Métodos de pago utilizados en ventas
 router.get('/metodos-pago', async (req, res) => {
   try {
-    console.log('>>> ENDPOINT METODOS-PAGO EJECUTADO <<<');
+    //console.log('>>> ENDPOINT METODOS-PAGO EJECUTADO <<<');
     const [rows] = await pool.query(`
       SELECT metodo_pago, SUM(total) as total
       FROM ventas
@@ -210,7 +210,7 @@ router.post('/', authenticate, async (req, res) => {
     const ventaId = insertResult.insertId;
 
     for (const prod of productos) {
-      console.log('Insertando en detalle_ventas:', prod);
+     // console.log('Insertando en detalle_ventas:', prod);
       // Verifica stock antes de descontar
       const [[stockCheck]] = await conn.query(
         'SELECT stock FROM products WHERE id = ?',

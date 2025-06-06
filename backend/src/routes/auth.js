@@ -60,7 +60,7 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error al iniciar sesión:', error);
+    // console.error('Error al iniciar sesión:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 });

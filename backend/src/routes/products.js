@@ -73,8 +73,8 @@ router.get('/destacados', async (req, res) => {
 
 // Agregar un producto
 router.post('/', authenticate, upload.single('image'), async (req, res) => {
-  console.log('BODY:', req.body);
-  console.log('FILE:', req.file);
+  //console.log('BODY:', req.body);
+ // console.log('FILE:', req.file);
 
   const {
     name,
