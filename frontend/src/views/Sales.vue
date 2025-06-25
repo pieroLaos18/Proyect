@@ -2,46 +2,51 @@
 
 <template>
   <div class="dynamic-content sales-modern">
-    <div class="sales-background-decor"></div>
-    <div class="sales-header-card">
-      <div class="sales-header-title">
-        <div class="sales-header-icon">
+    <header class="sales-header-bar">
+      <div class="sales-header-info">
+        <div class="sales-header-icon-bar">
           <i class="fas fa-cash-register"></i>
         </div>
-        <div>
+        <div class="sales-header-titles">
           <h1 class="sales-title">Ventas</h1>
-          <p class="sales-desc">Gestión de ventas realizadas en el sistema.</p>
+          <p class="sales-desc">Panel de control de ventas diarias y registro de operaciones.<br><span class="sales-context">Gestión de ventas realizadas en el sistema.</span></p>
         </div>
       </div>
       <button class="btn-primary" @click="modalNuevaVenta = true">
-        <i class="fas fa-plus"></i> Registrar Venta
+        <i class="fas fa-plus"></i> <span>Registrar Venta</span>
       </button>
-    </div>
+    </header>
 
     <div class="sales-actions">
       <input class="sales-search" v-model="busqueda" placeholder="Buscar por cliente o producto..." />
     </div>
 
+    <!-- Reloj en tiempo real -->
+    <div class="reloj-ventas">
+      <i class="fas fa-clock"></i>
+      <span>Hora: {{ horaActual }}</span>
+    </div>
+
     <!-- Tabla de ventas -->
-    <div class="sales-table-section modern-table-card">
+    <section class="sales-table-section modern-table-card">
       <table class="sales-table">
         <thead>
           <tr>
-            <th>#</th>
-            <th>Fecha</th>
-            <th>Cliente</th>
-            <th>Total</th>
-            <th>Acciones</th>
+            <th style="text-align:center;"><i class="fas fa-hashtag"></i></th>
+            <th style="text-align:center;"><i class="fas fa-calendar-day"></i> Fecha</th>
+            <th style="text-align:center;"><i class="fas fa-user"></i> Cliente</th>
+            <th style="text-align:center;"><i class="fas fa-money-bill-wave"></i> Total</th>
+            <th style="text-align:center;"><i class="fas fa-cogs"></i> Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="venta in ventasFiltradas" :key="venta.id" :class="{ 'venta-anulada': venta.anulada }">
-            <td>{{ venta.id }}</td>
-            <td>{{ venta.fecha }}</td>
-            <td>{{ venta.cliente }}</td>
-            <td><span class="total-badge">S/ {{ venta.total }}</span></td>
-            <td>
-              <div class="acciones-btns">
+            <td style="text-align:center;">{{ venta.id }}</td>
+            <td style="text-align:center;">{{ venta.fecha }}</td>
+            <td style="text-align:center;">{{ venta.cliente }}</td>
+            <td style="text-align:center;"><span class="total-badge">S/ {{ venta.total }}</span></td>
+            <td style="text-align:center;">
+              <div class="acciones-btns" style="justify-content:center;">
                 <button class="btn-ver" @click="abrirDetalle(venta)">
                   <i class="fas fa-eye"></i>
                 </button>
@@ -58,11 +63,11 @@
             </td>
           </tr>
           <tr v-if="ventasFiltradas.length === 0">
-            <td colspan="5" style="text-align:center;">No hay ventas registradas.</td>
+            <td colspan="5" style="text-align:center; color:#888;">No hay ventas registradas.</td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </section>
 
     <!-- Modal Nueva Venta -->
     <div v-if="modalNuevaVenta" class="modal-bg" @click.self="modalNuevaVenta = false">
@@ -223,90 +228,112 @@
 </template>
 
 <script>
-// Importa servicios y librerías necesarias
+// Servicios y librerías
 import salesService from '@/services/sales';
 import productsService from '@/services/products';
 import { jsPDF } from "jspdf";
+import { ref, onMounted, onUnmounted } from 'vue';
+
+/**
+ * Composable para reloj en tiempo real
+ * @returns {Object} horaActual reactiva
+ */
+function useClock() {
+  const horaActual = ref('');
+  let interval = null;
+  const actualizarHora = () => {
+    const ahora = new Date();
+    const horas = ahora.getHours().toString().padStart(2, '0');
+    const minutos = ahora.getMinutes().toString().padStart(2, '0');
+    const segundos = ahora.getSeconds().toString().padStart(2, '0');
+    horaActual.value = `${horas}:${minutos}:${segundos}`;
+  };
+  onMounted(() => {
+    actualizarHora();
+    interval = setInterval(actualizarHora, 1000);
+  });
+  onUnmounted(() => clearInterval(interval));
+  return { horaActual };
+}
 
 export default {
+  name: 'SalesView',
+  setup() {
+    // Reloj en tiempo real
+    const { horaActual } = useClock();
+    return { horaActual };
+  },
   data() {
     return {
-      // Filtros y datos de ventas
-      busqueda: "",
+      // Filtros y datos principales
+      busqueda: '',
       ventas: [],
+      productosDisponibles: [],
+      // Modales y formularios
       modalNuevaVenta: false,
       modalDetalle: false,
       detalleVenta: {},
-      nueva: {
-        cliente: "",
-        productos: [],
-        total: null,
-        metodo_pago: "", // <-- agrega esto
-      },
-      productoTemp: {
-        cantidad: 1,
-      },
-      productoBuscado: "",
-      productosFiltrados: [],
-      productoSeleccionado: null,
-      notificacion: {
-        visible: false,
-        mensaje: "",
-      },
-      impuestoPorcentaje: 18, // IGV o el impuesto que uses
-      metodoPago: 'efectivo',
-      otrosMetodoPago: '',
+      modalAnulacion: false,
       ventaAAnular: null,
       motivoAnulacion: '',
-      resumenVentas: null, // o [] o {} según lo que necesites
-      nuevaVenta: {
+      // Nueva venta
+      nueva: {
         cliente: '',
         productos: [],
-        subtotal: 0,
-        impuesto: 0,
-        total: 0,
-        metodo_pago: '', // <-- importante
-        // agrega otros campos si los necesitas
+        total: null,
+        metodo_pago: '',
       },
+      productoTemp: { cantidad: 1 },
+      productoBuscado: '',
+      productosFiltrados: [],
+      productoSeleccionado: null,
+      // Notificaciones
+      notificacion: { visible: false, mensaje: '' },
+      // Otros
+      impuestoPorcentaje: 18, // IGV Perú
+      resumenVentas: null,
     };
   },
   async mounted() {
-    // Carga ventas y productos al iniciar
+    // Carga inicial de ventas y productos
     await this.fetchVentas();
     await this.fetchProductos();
   },
   computed: {
-    // Filtra ventas por cliente o producto
+    /**
+     * Filtra ventas por cliente o producto
+     */
     ventasFiltradas() {
       if (!this.busqueda) return this.ventas;
       const b = this.busqueda.toLowerCase();
       return this.ventas.filter(
-        v =>
-          v.cliente.toLowerCase().includes(b) ||
+        v => v.cliente.toLowerCase().includes(b) ||
           v.productos.some(p => (p.name || '').toLowerCase().includes(b))
       );
     },
-    // Calcula subtotal de la venta actual
+    /**
+     * Subtotal de la venta actual
+     */
     subtotal() {
       return this.nueva.productos.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
     },
-    // Calcula el impuesto de la venta actual
+    /**
+     * Impuesto de la venta actual
+     */
     impuesto() {
       return (this.subtotal * this.impuestoPorcentaje / 100).toFixed(2);
     },
-    // Calcula el total con impuesto
+    /**
+     * Total con impuesto
+     */
     totalConImpuesto() {
       return (parseFloat(this.subtotal) + parseFloat(this.impuesto)).toFixed(2);
     },
-    // Total de productos en la venta actual
-    totalProductos() {
-      return this.nueva.productos
-        .reduce((sum, p) => sum + (p.cantidad * p.precio), 0)
-        .toFixed(2);
-    },
   },
   watch: {
-    // Actualiza productos filtrados y seleccionados al buscar
+    /**
+     * Actualiza productos filtrados y seleccionados al buscar
+     */
     productoBuscado(val) {
       this.filtrarProductos();
       const prod = this.productosDisponibles.find(p => (p.name || '').toLowerCase() === (val || '').toLowerCase());
@@ -314,7 +341,9 @@ export default {
     }
   },
   methods: {
-    // Obtiene todas las ventas desde el servicio
+    /**
+     * Obtiene todas las ventas desde el servicio
+     */
     async fetchVentas() {
       try {
         const res = await salesService.getAll();
@@ -322,10 +351,12 @@ export default {
       } catch (e) {
         alert('Error al cargar ventas');
       } finally {
-        this.resumenVentas = true; // <-- Esto oculta el mensaje
+        this.resumenVentas = true;
       }
     },
-    // Obtiene todos los productos desde el servicio
+    /**
+     * Obtiene todos los productos desde el servicio
+     */
     async fetchProductos() {
       try {
         const res = await productsService.getAll();
@@ -334,10 +365,11 @@ export default {
         alert('Error al cargar productos');
       }
     },
-    // Registra una nueva venta y actualiza stock
+    /**
+     * Registra una nueva venta y actualiza stock
+     */
     async registrarVenta() {
       if (!this.nueva.cliente || this.nueva.productos.length === 0) return;
-
       // Validar stock antes de registrar
       for (const prod of this.nueva.productos) {
         const productoOriginal = this.productosDisponibles.find(p => p.id === prod.id);
@@ -346,7 +378,6 @@ export default {
           return;
         }
       }
-
       try {
         const userId = localStorage.getItem('userId');
         const nuevaVenta = {
@@ -356,10 +387,9 @@ export default {
           impuesto: this.impuesto,
           total: this.totalConImpuesto,
           user_id: userId,
-          metodo_pago: this.nueva.metodo_pago // <-- aquí
+          metodo_pago: this.nueva.metodo_pago
         };
         await salesService.create(nuevaVenta);
-
         // Actualizar stock de cada producto vendido
         for (const prod of this.nueva.productos) {
           const productoOriginal = this.productosDisponibles.find(p => p.id === prod.id);
@@ -371,8 +401,8 @@ export default {
               price: productoOriginal.price,
               purchase_price: productoOriginal.purchase_price,
               category: productoOriginal.category,
-              marca: productoOriginal.marca, // <-- agrega esto
-              unidad_medida: productoOriginal.unidad_medida, // <-- y esto
+              marca: productoOriginal.marca,
+              unidad_medida: productoOriginal.unidad_medida,
               stock: nuevoStock,
               stock_min: productoOriginal.stock_min,
               stock_max: productoOriginal.stock_max,
@@ -380,11 +410,10 @@ export default {
             });
           }
         }
-
         this.$root.$emit('actualizarLowStock');
         await this.fetchVentas();
         await this.fetchProductos();
-        this.nueva = { cliente: "", productos: [], total: null, metodo_pago: "" };
+        this.nueva = { cliente: '', productos: [], total: null, metodo_pago: '' };
         this.productoTemp = { cantidad: 1 };
         this.modalNuevaVenta = false;
       } catch (e) {
@@ -392,58 +421,42 @@ export default {
         alert('Error al registrar venta');
       }
     },
-    // Abre el modal de detalle de venta
-    async abrirDetalle(venta) {
-      try {
-        const res = await salesService.getById(venta.id);
-        // Normaliza el campo precio para evitar NaN
-        this.detalleVenta = {
-          ...res.data,
-          productos: (res.data.productos || []).map(p => ({
-            ...p,
-            precio: p.precio !== undefined ? p.precio : p.price
-          }))
-        };
-        this.modalDetalle = true;
-      } catch (e) {
-        alert('Error al obtener detalle');
-      }
-    },
-    // Agrega un producto a la venta actual
+    /**
+     * Agrega un producto a la venta actual
+     */
     agregarProducto() {
       if (this.productoSeleccionado && this.productoTemp.cantidad > 0) {
-        // Busca si el producto ya está en la lista
-        const idx = this.nueva.productos.findIndex(
-          p => p.id === this.productoSeleccionado.id
-        );
+        const idx = this.nueva.productos.findIndex(p => p.id === this.productoSeleccionado.id);
         if (idx !== -1) {
-          // Si ya existe, suma la cantidad
           this.nueva.productos[idx].cantidad += Number(this.productoTemp.cantidad);
         } else {
-          // Si no existe, lo agrega
           this.nueva.productos.push({
             id: this.productoSeleccionado.id,
             cantidad: Number(this.productoTemp.cantidad),
             precio: this.productoSeleccionado.price
           });
         }
-        this.productoBuscado = "";
+        this.productoBuscado = '';
         this.productoSeleccionado = null;
         this.productoTemp = { cantidad: 1 };
       }
     },
-    // Elimina un producto de la venta actual
+    /**
+     * Elimina un producto de la venta actual
+     */
     eliminarProducto(idx) {
       this.nueva.productos.splice(idx, 1);
     },
-    // Filtra productos disponibles según búsqueda
+    /**
+     * Filtra productos disponibles según búsqueda
+     */
     filtrarProductos() {
       const b = (this.productoBuscado || '').toLowerCase();
-      this.productosFiltrados = this.productosDisponibles.filter(p =>
-        (p.name || '').toLowerCase().includes(b)
-      );
+      this.productosFiltrados = this.productosDisponibles.filter(p => (p.name || '').toLowerCase().includes(b));
     },
-    // Muestra una notificación personalizada
+    /**
+     * Muestra una notificación personalizada
+     */
     mostrarNotificacion(msg) {
       this.notificacion.mensaje = msg;
       this.notificacion.visible = true;
@@ -451,17 +464,23 @@ export default {
         this.notificacion.visible = false;
       }, 3500);
     },
-    // Abre el modal para anular una venta
+    /**
+     * Abre el modal para anular una venta
+     */
     abrirModalAnulacion(venta) {
       this.ventaAAnular = venta;
       this.motivoAnulacion = '';
     },
-    // Cierra el modal de anulación
+    /**
+     * Cierra el modal de anulación
+     */
     cerrarModalAnulacion() {
       this.ventaAAnular = null;
       this.motivoAnulacion = '';
     },
-    // Anula una venta y actualiza la lista
+    /**
+     * Anula una venta y actualiza la lista
+     */
     async anularVenta() {
       if (!this.motivoAnulacion.trim()) {
         this.mostrarNotificacion('Debe ingresar un motivo de anulación.');
@@ -477,7 +496,27 @@ export default {
         this.mostrarNotificacion('Error al anular venta');
       }
     },
-    // Imprime la boleta de la venta
+    /**
+     * Abre el modal de detalle de venta
+     */
+    async abrirDetalle(venta) {
+      try {
+        const res = await salesService.getById(venta.id);
+        this.detalleVenta = {
+          ...res.data,
+          productos: (res.data.productos || []).map(p => ({
+            ...p,
+            precio: p.precio !== undefined ? p.precio : p.price
+          }))
+        };
+        this.modalDetalle = true;
+      } catch (e) {
+        alert('Error al obtener detalle');
+      }
+    },
+    /**
+     * Imprime la boleta de la venta
+     */
     imprimirBoleta() {
       const contenido = document.getElementById('boleta-contenido').innerHTML;
       const ventana = window.open('', '', 'width=800,height=600');
@@ -502,12 +541,13 @@ export default {
       ventana.focus();
       ventana.print();
     },
-    // Descarga la boleta de la venta como PDF
+    /**
+     * Descarga la boleta de la venta como PDF
+     */
     descargarBoletaPDF() {
       const doc = new jsPDF();
       const venta = this.detalleVenta;
       let y = 15;
-
       doc.setFontSize(18);
       doc.text("Boleta Electrónica", 105, y, { align: "center" });
       y += 10;
@@ -518,7 +558,6 @@ export default {
       y += 7;
       doc.text(`Cliente: ${venta.cliente}`, 15, y);
       y += 10;
-
       doc.text("Productos:", 15, y);
       y += 7;
       venta.productos.forEach((prod) => {
@@ -529,16 +568,12 @@ export default {
         );
         y += 7;
       });
-
       y += 5;
       doc.setFontSize(14);
       doc.text(`Total: S/ ${venta.total}`, 15, y);
-
       y += 15;
       doc.setFontSize(12);
       doc.text("¡Gracias por su compra!", 105, y, { align: "center" });
-
-      // Nombre del archivo personalizado
       doc.save(`boleta-venta-${venta.id}.pdf`);
     },
   },
