@@ -576,6 +576,169 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* --- MODAL BOLETA ELECTRÓNICA MEJORADO --- */
+#detalle-venta-modal {
+  max-width: 420px;
+  margin: 0 auto;
+  background: #f7fbff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 #18344a22;
+  padding: 2.2rem 1.5rem 1.5rem 1.5rem;
+  border: none;
+  animation: modalIn 0.4s;
+}
+.boleta-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+  border-bottom: 2px solid #43cea2;
+  padding-bottom: 0.7rem;
+}
+.boleta-title {
+  color: #18344a;
+  font-size: 1.5rem;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: 1px;
+}
+.boleta-id {
+  color: #3498db;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+.boleta-info {
+  color: #18344a;
+  font-size: 1.07rem;
+  margin-bottom: 1rem;
+  background: #eaf6ff;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+}
+.boleta-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px 0 #3498db11;
+}
+.boleta-table th, .boleta-table td {
+  border: none;
+  padding: 0.7em 0.7em;
+  text-align: left;
+  font-size: 1.07rem;
+}
+.boleta-table th {
+  background: #3498db;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.boleta-table td {
+  color: #18344a;
+  font-weight: 600;
+  background: #f7fbff;
+}
+.boleta-total {
+  color: #18344a;
+  font-size: 1.18rem;
+  font-weight: 900;
+  margin-bottom: 0.7rem;
+  background: #eaf6ff;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  text-align: right;
+}
+.anulada-info {
+  background: #fbeaea;
+  color: #E74C3C;
+  border-radius: 8px;
+  padding: 0.7em 1em;
+  margin-bottom: 0.7em;
+  font-weight: 700;
+  text-align: center;
+}
+.boleta-footer {
+  color: #43cea2;
+  font-size: 1.13rem;
+  text-align: center;
+  margin-top: 1.2rem;
+  font-weight: 900;
+  background: #eaf6ff;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+}
+.btn-imprimir, .btn-imprimir.no-print {
+  background: linear-gradient(90deg, #F1C40F 60%, #F39C12 100%);
+  color: #18344a;
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 0;
+  font-size: 1.13rem;
+  font-weight: 900;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 0.7rem;
+  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  box-shadow: 0 4px 0 0 #bfa600, 0 2px 8px 0 #f1c40f33;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.btn-imprimir i {
+  font-size: 1.3em;
+  margin-right: 0.2em;
+}
+.btn-imprimir:active {
+  background: linear-gradient(90deg, #F39C12 60%, #F1C40F 100%);
+}
+.btn-ver.no-print {
+  margin-top: 1.2rem;
+  width: 100%;
+  border-radius: 8px;
+  font-size: 1.13rem;
+  font-weight: 900;
+  padding: 1rem 0;
+  background: #3498db;
+  color: #fff;
+  box-shadow: 0 4px 0 0 #1F3B4D, 0 2px 8px 0 #3498db22;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: none;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+}
+.btn-ver.no-print:active {
+  background: #217dbb;
+}
+@media (max-width: 600px) {
+  #detalle-venta-modal {
+    padding: 1.2rem 0.5rem 1rem 0.5rem;
+    width: 98vw;
+    min-width: unset;
+    max-width: 98vw;
+  }
+  .boleta-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .boleta-total, .boleta-footer {
+    text-align: left;
+    padding: 0.7rem 0.5rem;
+  }
+}
+
 /* Efecto "tecla" para botones principales */
 .btn-primary, .btn-ver, .btn-anular, .btn-imprimir, .agregar-btn {
   box-shadow: 0 4px 0 0 #1F3B4D, 0 2px 8px 0 #3498db22;
